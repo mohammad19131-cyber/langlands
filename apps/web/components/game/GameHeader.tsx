@@ -190,9 +190,17 @@ export function GameHeader({
             >
               <p className="truncate text-[0.72rem] text-[#C9C2AD]">{ctx.email ?? "Not signed in"}</p>
               {ctx.isOrganiser ? (
-                <p className="mt-1 text-[0.62rem] uppercase tracking-[0.12em] text-[#D9B15A]">
-                  Organiser
-                </p>
+                <>
+                  <p className="mt-1 text-[0.62rem] uppercase tracking-[0.12em] text-[#D9B15A]">
+                    Organiser
+                  </p>
+                  <a
+                    href="/room"
+                    className="mt-3 block border border-[#B89A60]/30 px-3 py-1.5 text-center text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
+                  >
+                    Control room
+                  </a>
+                </>
               ) : null}
               {ctx.signedIn ? (
                 <form action="/auth/sign-out" method="post" className="mt-3">
