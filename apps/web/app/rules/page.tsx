@@ -55,7 +55,7 @@ export default function RulesPage() {
           <li>{ROUNDS} rounds. Each round is one game-year.</li>
           <li>Real clock: 18 minutes to decide, then the server locks, processes all 20 towns, and publishes together.</li>
           <li>Recommended live session: 20 min briefing + 6 × 20 min + 20 min debrief.</li>
-          <li>Auth is invited Google or magic link. No public sign-up. No 21st team.</li>
+          <li>Auth is Team ID and password. No public sign-up. No 21st team.</li>
         </ul>
       </section>
 

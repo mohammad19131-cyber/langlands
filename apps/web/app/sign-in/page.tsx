@@ -63,7 +63,8 @@ export default async function SignInPage() {
         </div>
 
         <p className="mt-6 text-center text-[0.68rem] leading-4 text-[#5F5B4D]">
-          Accounts are organiser-invited. Scores, budgets and results are decided on the server.
+          Sign in with the Team ID and password issued for your seat. Scores, budgets and results
+          are decided on the server.
         </p>
       </div>
     </main>

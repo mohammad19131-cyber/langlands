@@ -81,7 +81,7 @@ Next.js still checks session and team on every action so error messages are clea
 
 ## Auth recommendation (frozen unless ops objects)
 
-School Google Workspace **or** magic link, organiser-invited only. No public sign-up. No 21st team.
+Team ID (seat `01`–`20`) **and password**. No Google, no magic-link email in the player UI. No public sign-up. No 21st team. Auth users are `seat-NN@teams.langlands.app`, linked to seats via `team_members`.
 
 ## Secrets
 

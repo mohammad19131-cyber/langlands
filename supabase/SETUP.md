@@ -13,19 +13,25 @@ npm run test:sim     # frozen engine, 54 tests
 
 These do **not** talk to supabase.com.
 
-## Hosted project (unrun until you do it)
+## Hosted verification (2026-10-17)
+
+Project ref `npwgkqfljrqhvuiateqk`. CLI `supabase db push` applied `0001`–`0006` in order. Remote migration history lists all six. Seed confirmed: slug `langlands-r3`, status `ready`, 20 seats, 6 scheduled rounds (18-minute windows, 2099 placeholder clock), 15 catalogue codes, town checksum `e0cfd3ee…`, 0 profiles / submissions / town_states. FORCE RLS is on for all 13 public tables. Organiser RPCs are `service_role` only; `submit_decision` is `authenticated`. **Auth dashboard still allows public signup** — disable it before invitations. Redirect URLs and Vercel env vars are still a dashboard step.
+
+## Hosted project (keys and Auth)
 
 ### 1. Project and keys
 
 1. Create a project at https://supabase.com/dashboard.
 2. Project Settings → API into `apps/web/.env.local` (names in `.env.example`):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY` — server only, never `NEXT_PUBLIC_*`
+   - `NEXT_PUBLIC_SUPABASE_URL` — Project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — **Publishable** key (legacy name: anon). Browser-safe.
+   - `SUPABASE_SERVICE_ROLE_KEY` — **Secret** key (legacy name: service_role). Server only, never `NEXT_PUBLIC_*`
 
-### 2. Auth (invited only)
+### 2. Auth (Team ID + password)
 
-Authentication → Providers: Email (magic link) and/or Google. **Disable** “Allow new users to sign up”.
+Authentication → Providers: **Email** with password sign-in. Disable Google. **Disable** “Allow new users to sign up”.
+
+Player UI is Team ID (`01`–`20`) and password. The app maps seat *N* to `seat-NN@teams.langlands.app` (for example seat 3 → `seat-03@teams.langlands.app`). Provision those 20 Auth users with passwords you choose, then attach each as captain of the matching seat.
 
 URL Configuration: Site URL + `http://localhost:3000/auth/callback` and the production callback.
 
@@ -86,3 +92,15 @@ Not automated here (no Docker on the Phase 2 builder). After `db push`, a hosted
 - Official simulation, lock, scores, `town_states`, `published_results`: service role on the server after a session check.
 - Submit uses the user JWT against `submit_decision` (`auth.uid()`). Organiser RPCs are not executable as `authenticated`.
 - Rivals read `published_results` after `rounds.status = 'published'`, never `town_states`.
+
+### 6. Vercel
+
+Set the same three names on Production and Preview. Do not add a `NEXT_PUBLIC_` copy of the secret.
+
+| Vercel name | Dashboard source |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Secret key |
+
+Authentication → URL Configuration: Site URL = the Vercel origin. Redirect URLs must include `http://localhost:3000/auth/callback` and `https://<vercel-domain>/auth/callback`.

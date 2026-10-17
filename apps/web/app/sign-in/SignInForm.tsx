@@ -1,106 +1,99 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { createBrowserSupabase } from "../../lib/supabase/client";
+import { parseTeamLoginId, teamLoginEmail } from "../../lib/team-login";
 
 export function SignInForm() {
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const [teamId, setTeamId] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  function callbackUrl() {
-    return `${window.location.origin}/auth/callback?next=/play`;
-  }
-
-  async function sendMagicLink(event: FormEvent) {
+  async function signIn(event: FormEvent) {
     event.preventDefault();
     setPending(true);
     setError(null);
-    setMessage(null);
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
-      setError("The competition backend is not configured in this browser build.");
-      setPending(false);
-      return;
-    }
-    const { error: signError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: callbackUrl() },
-    });
-    if (signError) {
-      setError(signError.message);
-    } else {
-      setMessage("If that address is invited, a sign-in link is on its way.");
-    }
-    setPending(false);
-  }
 
-  async function signInWithGoogle() {
-    setPending(true);
-    setError(null);
-    setMessage(null);
+    const seat = parseTeamLoginId(teamId);
+    if (seat === null) {
+      setError("Enter a Team ID from 01 to 20.");
+      setPending(false);
+      return;
+    }
+
     const supabase = createBrowserSupabase();
     if (!supabase) {
       setError("The competition backend is not configured in this browser build.");
       setPending(false);
       return;
     }
-    const { error: signError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: callbackUrl() },
+
+    const { error: signError } = await supabase.auth.signInWithPassword({
+      email: teamLoginEmail(seat),
+      password,
     });
     if (signError) {
-      setError(signError.message);
+      setError("Team ID or password is incorrect.");
       setPending(false);
+      return;
     }
+
+    router.push("/play");
+    router.refresh();
   }
 
   return (
-    <div className="space-y-5">
-      <form onSubmit={sendMagicLink} className="space-y-2.5">
-        <label
-          className="block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
-          htmlFor="email"
-        >
-          Team email
-        </label>
-        <input
-          id="email"
-          type="email"
-          required
-          autoComplete="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
-          placeholder="team@school.edu"
-        />
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full border border-[#7BA157]/60 bg-[#2A4C39] px-4 py-2.5 text-sm uppercase tracking-[0.08em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
-        >
-          {pending ? "Sending…" : "Send sign-in link"}
-        </button>
-      </form>
+    <form onSubmit={signIn} className="space-y-2.5">
+      <label
+        className="block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
+        htmlFor="team-id"
+      >
+        Team ID
+      </label>
+      <input
+        id="team-id"
+        name="team-id"
+        type="text"
+        inputMode="numeric"
+        required
+        autoComplete="username"
+        autoCapitalize="none"
+        spellCheck={false}
+        value={teamId}
+        onChange={(event) => setTeamId(event.target.value)}
+        className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
+        placeholder="01"
+      />
 
-      <div className="flex items-center gap-3 text-[0.62rem] uppercase tracking-[0.14em] text-[#5F5B4D]">
-        <span className="h-px flex-1 bg-white/10" />
-        or
-        <span className="h-px flex-1 bg-white/10" />
-      </div>
+      <label
+        className="mt-3 block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
+        htmlFor="password"
+      >
+        Password
+      </label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        required
+        autoComplete="current-password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
+      />
 
       <button
-        type="button"
-        onClick={signInWithGoogle}
+        type="submit"
         disabled={pending}
-        className="w-full border border-[#B89A60]/30 px-4 py-2.5 text-sm text-[#D7CFB8] transition-colors hover:bg-white/5 disabled:opacity-50"
+        className="mt-2 w-full border border-[#7BA157]/60 bg-[#2A4C39] px-4 py-2.5 text-sm uppercase tracking-[0.08em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
       >
-        Continue with Google
+        {pending ? "Signing in…" : "Sign in"}
       </button>
 
       {error ? <p className="text-sm text-[#C0533E]">{error}</p> : null}
-      {message ? <p className="text-sm text-[#9FC27E]">{message}</p> : null}
-    </div>
+    </form>
   );
 }
