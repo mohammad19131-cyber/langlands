@@ -1,5 +1,7 @@
 import type { Sector } from "@langlands/sim/public";
 import type { TownView } from "./ashfen";
+import type { BoardSeat as RankedSeat } from "./ranking";
+import type { ScoreBreakdown as DisplayBreakdown } from "./score-display";
 
 /**
  * Serialisable game state handed from the server (play/page.tsx) to the
@@ -44,20 +46,17 @@ export type ExistingSubmission = {
   status: string;
 } | null;
 
-export type LeaderRow = {
-  seat: number;
-  name: string;
-  snapshot: number;
-  final: number | null;
-  ecology: number;
-  isYou: boolean;
-};
+export type ScoreBreakdown = DisplayBreakdown;
+export type BoardSeat = RankedSeat;
+export type LeaderRow = RankedSeat;
 
 export type OwnPublishedRound = {
   roundIndex: number;
   snapshot: number;
   final: number | null;
-  ecology: number;
+  penalty: number | null;
+  breakdown: ScoreBreakdown | null;
+  ecology: number | null;
   reserve: number;
   population: number;
   air: number;
@@ -65,6 +64,26 @@ export type OwnPublishedRound = {
   soil: number;
   bio: number;
   pollution: number;
+  health: number;
+  services: number;
+  jobs: number;
+  economy: number;
+  fiscal: number;
+  energy: number;
+  infra: number;
+  prep: number;
+  buffer: number;
+  badges: {
+    energyMix: "thermal-heavy" | "mixed" | "clean-leaning";
+    agriculture: "intensive" | "mixed" | "regenerative";
+    industry: "light" | "heavy";
+  };
+};
+
+export type RoundSummary = {
+  index: number;
+  id: string | null;
+  status: RoundPhase;
 };
 
 export type GameContext = {
@@ -85,9 +104,14 @@ export type GameContext = {
   /** Codes already completed (satisfy prerequisites, drive event mitigation). */
   completedCodes: string[];
   submission: ExistingSubmission;
-  leaderboard: LeaderRow[] | null;
+  /** Latest published board, or null when no round has been published. */
+  leaderboard: BoardSeat[] | null;
+  /** Ranked public boards keyed by published round index. */
+  boardByRound: Record<number, BoardSeat[]>;
   ownHistory: OwnPublishedRound[];
   publishedRoundIndex: number | null;
+  publishedRounds: number[];
+  roundSummaries: RoundSummary[];
   /** Honest status line, e.g. why the round is not submittable. */
   notice: string | null;
 };

@@ -13,5 +13,5 @@ export default async function HistoryPage() {
   if (ctx.configured && !ctx.signedIn) {
     redirect("/sign-in");
   }
-  return <GameScreen ctx={ctx} initialTab="history" deskOpen />;
+  return <GameScreen ctx={ctx} initialTab="results" deskOpen />;
 }

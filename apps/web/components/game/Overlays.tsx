@@ -1,12 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CATALOGUE, SECTORS, WEIGHTS, type Sector } from "@langlands/sim/public";
-import { EVENT_SCHEDULE, PILLARS } from "../../lib/ashfen";
+import { CATALOGUE, SECTORS, type Sector } from "@langlands/sim/public";
+import { EVENT_SCHEDULE } from "../../lib/ashfen";
 import { SECTOR_LABELS, EVENT_LABELS } from "../../lib/format";
 import type { GameContext } from "../../lib/game-types";
+import { formatScore, PILLAR_KEYS, PILLAR_LABELS, PILLAR_WEIGHT_PCT } from "../../lib/score-display";
 import { projectCost, sumAllocations } from "./game-logic";
 import { SECTOR_ACCENT } from "./ActionBar";
+import { Leaderboard } from "./Leaderboard";
+import { ScoringWeightsNote } from "./ResultsPanel";
 
 export type SubmitState = {
   status: "idle" | "submitting" | "success" | "error" | "closed";
@@ -62,96 +65,56 @@ function Modal({
 }
 
 export function StandingsOverlay({ ctx, onClose }: { ctx: GameContext; onClose: () => void }) {
-  const rows = ctx.leaderboard;
   return (
-    <Modal title="Standings" onClose={onClose} width="max-w-xl">
-      {!rows || rows.length === 0 ? (
-        <p className="text-[0.84rem] leading-6 text-[#A9A491]">
-          No round has been published yet. Official standings appear here once the organiser
-          publishes results — they come straight from the server, never computed in your browser.
-        </p>
-      ) : (
-        <div>
-          <p className="mb-3 text-[0.68rem] uppercase tracking-[0.12em] text-[#8A8674]">
-            Official · after round {ctx.publishedRoundIndex}
-          </p>
-          <table className="w-full border-collapse text-left text-[0.8rem]">
-            <thead>
-              <tr className="text-[0.62rem] uppercase tracking-[0.1em] text-[#8A8674]">
-                <th className="py-1.5 pr-2 font-normal">#</th>
-                <th className="py-1.5 pr-2 font-normal">Team</th>
-                <th className="py-1.5 pr-2 text-right font-normal">Ecology</th>
-                <th className="py-1.5 pl-2 text-right font-normal">Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, idx) => (
-                <tr
-                  key={`${r.seat}-${r.name}`}
-                  className={`border-t border-white/6 ${r.isYou ? "bg-[#D9B15A]/8" : ""}`}
-                >
-                  <td className="py-1.5 pr-2 tabular-nums text-[#8A8674]">{idx + 1}</td>
-                  <td className="py-1.5 pr-2 text-[#E3DCC8]">
-                    {r.name}
-                    {r.isYou ? <span className="ml-2 text-[0.62rem] text-[#D9B15A]">YOU</span> : null}
-                  </td>
-                  <td className="py-1.5 pr-2 text-right tabular-nums text-[#9FC27E]">
-                    {Math.round(r.ecology)}
-                  </td>
-                  <td className="py-1.5 pl-2 text-right tabular-nums text-[#EDE8D9]">
-                    {(r.final ?? r.snapshot).toFixed(2)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+    <Modal title="Official standings" onClose={onClose} width="max-w-4xl">
+      <Leaderboard ctx={ctx} />
     </Modal>
   );
 }
 
 export function ScoringOverlay({ ctx, onClose }: { ctx: GameContext; onClose: () => void }) {
-  const i = ctx.town.indicators;
-  const computed: Record<string, number | null> = {
-    ecology: (i.air + i.water_q + i.soil + i.bio + (100 - i.pollution)) / 5,
-    welfare: (i.health + i.services + i.jobs) / 3,
-    economy: (i.economy + i.fiscal + i.energy) / 3,
-    resilience: null,
-    efficiency: null,
-  };
+  const latest = ctx.ownHistory.at(-1) ?? null;
   return (
-    <Modal title="Scoring" onClose={onClose} width="max-w-lg">
+    <Modal title="Official scoring" onClose={onClose} width="max-w-lg">
       <p className="mb-4 text-[0.8rem] leading-6 text-[#A9A491]">
-        The official path score is a weighted blend of five pillars, computed on the server from the
-        frozen engine. Live readings below are indicative; resilience and efficiency are only scored
-        when a round resolves.
+        Five weighted pillars, frozen at Ecology 40, Welfare 25, Economy 15, Resilience 10,
+        Efficiency 10. Numbers below are stored official results. Live town readings are not a score.
       </p>
+      {!latest?.breakdown ? (
+        <p className="mb-4 text-[0.84rem] leading-6 text-[#C9C2AD]">
+          Official pillar scores are unavailable until a round is published. That is not a zero.
+        </p>
+      ) : (
+        <p className="mb-4 text-[0.74rem] text-[#8A8674]">
+          After round {latest.roundIndex} · snapshot {formatScore(latest.snapshot)} · path{" "}
+          {formatScore(latest.final ?? latest.snapshot)}
+          {latest.penalty != null ? ` · penalty ${formatScore(latest.penalty)}` : ""}
+        </p>
+      )}
       <div className="space-y-2">
-        {PILLARS.map((p) => {
-          const weight = Math.round(WEIGHTS[p.key] * 100);
-          const value = computed[p.key];
+        {PILLAR_KEYS.map((key) => {
+          const value = latest?.breakdown?.[key] ?? null;
+          const width = value == null ? 0 : Math.max(2, Math.min(100, value));
           return (
-            <div key={p.key} className="border border-white/8 bg-white/[0.02] px-3 py-2.5">
+            <div key={key} className="border border-white/8 bg-white/[0.02] px-3 py-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[0.86rem] text-[#E3DCC8]">{p.name}</span>
-                <span className="text-[0.72rem] tabular-nums text-[#D9B15A]">{weight}%</span>
+                <span className="text-[0.86rem] text-[#E3DCC8]">{PILLAR_LABELS[key]}</span>
+                <span className="text-[0.72rem] tabular-nums text-[#D9B15A]">{PILLAR_WEIGHT_PCT[key]}%</span>
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <span className="h-1.5 flex-1 overflow-hidden bg-white/10">
-                  <span
-                    className="block h-full bg-[#7BA157]"
-                    style={{ width: value == null ? "0%" : `${Math.max(2, Math.min(100, value))}%` }}
-                  />
+                  <span className="block h-full bg-[#7BA157]" style={{ width: `${width}%` }} />
                 </span>
-                <span className="w-20 text-right text-[0.72rem] tabular-nums text-[#B7B19D]">
-                  {value == null ? "at results" : Math.round(value)}
+                <span className="w-16 text-right text-[0.72rem] tabular-nums text-[#B7B19D]">
+                  {formatScore(value, 1)}
                 </span>
               </div>
-              <p className="mt-1.5 text-[0.68rem] leading-4 text-[#6F6B5B]">{p.blurb}</p>
             </div>
           );
         })}
+      </div>
+      <div className="mt-4">
+        <ScoringWeightsNote />
       </div>
     </Modal>
   );

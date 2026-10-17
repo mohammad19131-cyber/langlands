@@ -141,10 +141,16 @@ export function GameHeader({
           Decide
         </a>
         <a
-          href="/play/history"
+          href="/play/results"
           className="hidden border border-[#B89A60]/25 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#C9C2AD] transition-colors hover:bg-white/5 sm:inline"
         >
-          History
+          Results
+        </a>
+        <a
+          href="/board"
+          className="hidden border border-[#B89A60]/25 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#C9C2AD] transition-colors hover:bg-white/5 lg:inline"
+        >
+          Board
         </a>
         <button
           type="button"

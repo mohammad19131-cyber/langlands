@@ -8,19 +8,18 @@ import {
 } from "@langlands/sim";
 import { parseTown, townBadges } from "@langlands/round-machine";
 import type { IndicatorKey, TownView } from "../ashfen";
-import type {
-  Budget,
-  EventCode,
-  GameContext,
-  LeaderRow,
-  OwnPublishedRound,
-  RoundInfo,
-  RoundPhase,
-} from "../game-types";
+import type { Budget, EventCode, GameContext, RoundInfo, RoundPhase } from "../game-types";
 import { publicPlayerLabel } from "../display-identity";
 import { getPublicSupabaseConfig, hasServiceRole } from "../env";
 import { createServerSupabase } from "../supabase/server";
 import { createServiceRoleClient } from "../supabase/admin";
+import {
+  buildBoards,
+  loadCompetitionRoster,
+  loadPublishedResultRows,
+  ownHistoryFrom,
+  roundSummariesFrom,
+} from "./published-board";
 
 const INDICATOR_KEYS: IndicatorKey[] = [
   "air",
@@ -96,8 +95,11 @@ function previewContext(args: {
     completedCodes: [],
     submission: null,
     leaderboard: null,
+    boardByRound: {},
     ownHistory: [],
     publishedRoundIndex: null,
+    publishedRounds: [],
+    roundSummaries: [],
     notice: args.notice,
   };
 }
@@ -121,17 +123,6 @@ function toRoundInfo(r: RoundRow, serverNow: string): RoundInfo {
     eventCode: r.event_code ?? (PACK_A[r.round_index] as EventCode | null) ?? null,
     serverNow,
   };
-}
-
-function ecologyFromRow(row: Record<string, number>): number {
-  return (
-    (Number(row.air) +
-      Number(row.water_q) +
-      Number(row.soil) +
-      Number(row.bio) +
-      (100 - Number(row.pollution))) /
-    5
-  );
 }
 
 /**
@@ -253,30 +244,21 @@ export async function loadGameContext(): Promise<GameContext> {
   const lastPublished = publishedRounds[publishedRounds.length - 1];
 
   const activeRound = openRound ?? inFlight ?? scheduled ?? lastPublished ?? null;
-
-  // Leaderboard from the most recently published round (public results only).
-  let leaderboard: LeaderRow[] | null = null;
-  let publishedRoundIndex: number | null = null;
-  if (lastPublished) {
-    publishedRoundIndex = lastPublished.round_index;
-    const { data: results } = await admin
-      .from("published_results")
-      .select(
-        "team_seat, team_name, snapshot_score, final_score, air, water_q, soil, bio, pollution",
-      )
-      .eq("round_id", lastPublished.id);
-    const rows = (results as Record<string, number | string>[] | null) ?? [];
-    leaderboard = rows
-      .map((row) => ({
-        seat: Number(row.team_seat),
-        name: String(row.team_name),
-        snapshot: Number(row.snapshot_score),
-        final: row.final_score == null ? null : Number(row.final_score),
-        ecology: ecologyFromRow(row as Record<string, number>),
-        isYou: Number(row.team_seat) === team.seat,
-      }))
-      .sort((a, b) => (b.final ?? b.snapshot) - (a.final ?? a.snapshot));
-  }
+  const roundSummaries = roundSummariesFrom(rounds);
+  const publishedIds = publishedRounds.map((row) => row.id);
+  const [roster, publishedRows] = await Promise.all([
+    loadCompetitionRoster(admin, competitionId),
+    loadPublishedResultRows(admin, publishedIds),
+  ]);
+  const { boardByRound, publishedRounds: publishedIndexes } = buildBoards({
+    roundSummaries,
+    teams: roster,
+    results: publishedRows,
+    viewerSeat: team.seat,
+  });
+  const publishedRoundIndex = lastPublished?.round_index ?? null;
+  const leaderboard =
+    publishedRoundIndex != null ? (boardByRound[publishedRoundIndex] ?? null) : null;
 
   // Resolve the town the player is looking at + the budget for the decision round.
   let town: Town;
@@ -350,33 +332,7 @@ export async function loadGameContext(): Promise<GameContext> {
     }
   }
 
-  const ownHistory: OwnPublishedRound[] = [];
-  if (publishedRounds.length) {
-    const publishedIds = publishedRounds.map((row) => row.id);
-    const { data: ownRows } = await admin
-      .from("published_results")
-      .select(
-        "round_index, snapshot_score, final_score, air, water_q, soil, bio, pollution, reserve, population",
-      )
-      .eq("team_id", team.id)
-      .in("round_id", publishedIds)
-      .order("round_index");
-    for (const row of (ownRows as Record<string, number | string | null>[] | null) ?? []) {
-      ownHistory.push({
-        roundIndex: Number(row.round_index),
-        snapshot: Number(row.snapshot_score),
-        final: row.final_score == null ? null : Number(row.final_score),
-        ecology: ecologyFromRow(row as Record<string, number>),
-        reserve: Number(row.reserve),
-        population: Number(row.population),
-        air: Number(row.air),
-        water_q: Number(row.water_q),
-        soil: Number(row.soil),
-        bio: Number(row.bio),
-        pollution: Number(row.pollution),
-      });
-    }
-  }
+  const ownHistory = ownHistoryFrom(publishedRows, team.seat);
 
   const serverNow = new Date().toISOString();
 
@@ -400,8 +356,11 @@ export async function loadGameContext(): Promise<GameContext> {
     completedCodes: Object.keys(town.completed ?? {}),
     submission,
     leaderboard,
+    boardByRound,
     ownHistory,
     publishedRoundIndex,
+    publishedRounds: publishedIndexes,
+    roundSummaries,
     notice,
   };
 }

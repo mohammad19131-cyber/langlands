@@ -7,8 +7,9 @@ import { SECTOR_LABELS } from "../../lib/format";
 import { CATEGORIES, MAX_STARTS_PER_ROUND, type GameContext } from "../../lib/game-types";
 import { projectsForSector, startEligibility, summariseEffects } from "./game-logic";
 import { SECTOR_ACCENT } from "./ActionBar";
+import { ResultsPanel } from "./ResultsPanel";
 
-export type DeskTab = "decide" | "catalogue" | "town" | "history";
+export type DeskTab = "decide" | "catalogue" | "town" | "results" | "history";
 
 const BAND_COLOR: Record<string, string> = {
   critical: "#C0533E",
@@ -67,7 +68,7 @@ export function CommandDesk({
             ["decide", "Budget"],
             ["catalogue", "Catalogue"],
             ["town", "Town"],
-            ["history", "History"],
+            ["results", "Results"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -75,7 +76,7 @@ export function CommandDesk({
             type="button"
             onClick={() => onTab(id)}
             className={`flex-1 px-2 py-2 text-[0.66rem] uppercase tracking-[0.1em] transition-colors ${
-              tab === id
+              tab === id || (id === "results" && tab === "history")
                 ? "border-b-2 border-[#D9B15A] text-[#F2ECDC]"
                 : "text-[#8A8674] hover:text-[#D7CFB8]"
             }`}
@@ -111,7 +112,7 @@ export function CommandDesk({
           />
         ) : null}
         {tab === "town" ? <TownTab ctx={ctx} /> : null}
-        {tab === "history" ? <HistoryTab ctx={ctx} /> : null}
+        {tab === "results" || tab === "history" ? <ResultsPanel ctx={ctx} /> : null}
       </div>
     </aside>
   );
@@ -413,68 +414,6 @@ function TownTab({ ctx }: { ctx: GameContext }) {
           )}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function HistoryTab({ ctx }: { ctx: GameContext }) {
-  if (ctx.ownHistory.length === 0) {
-    return (
-      <div className="p-4 text-[0.8rem] leading-6 text-[#A9A491]">
-        No published rounds yet. After the organiser publishes, your own town results appear here.
-        Rival unpublished states are never shown.
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-3 p-4">
-      <p className="text-[0.68rem] text-[#8A8674]">Your published rounds only. Rival unpublished states are never shown.</p>
-      {ctx.ownHistory.map((row) => (
-        <article key={row.roundIndex} className="border border-white/8 bg-white/[0.02] px-3 py-2.5">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-[0.78rem] uppercase tracking-[0.1em] text-[#E3DCC8]">
-              Round {row.roundIndex}
-            </h3>
-            <p className="font-serif tabular-nums text-[#EDE8D9]">
-              {(row.final ?? row.snapshot).toFixed(2)}
-            </p>
-          </div>
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[0.72rem] text-[#C9C2AD]">
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Ecology</dt>
-              <dd className="tabular-nums">{Math.round(row.ecology)}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Reserve</dt>
-              <dd className="tabular-nums">{Math.round(row.reserve)} cr</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Population</dt>
-              <dd className="tabular-nums">{row.population.toLocaleString()}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Air</dt>
-              <dd className="tabular-nums">{Math.round(row.air)}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Water</dt>
-              <dd className="tabular-nums">{Math.round(row.water_q)}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Soil</dt>
-              <dd className="tabular-nums">{Math.round(row.soil)}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Habitat</dt>
-              <dd className="tabular-nums">{Math.round(row.bio)}</dd>
-            </div>
-            <div className="flex justify-between gap-2">
-              <dt className="text-[#8A8674]">Pollution</dt>
-              <dd className="tabular-nums">{Math.round(row.pollution)}</dd>
-            </div>
-          </dl>
-        </article>
-      ))}
     </div>
   );
 }

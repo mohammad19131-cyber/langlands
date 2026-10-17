@@ -39,10 +39,12 @@ export function GameScreen({
   ctx,
   initialTab = "decide",
   deskOpen: deskStart = true,
+  initialOverlay = null,
 }: {
   ctx: GameContext;
   initialTab?: DeskTab;
   deskOpen?: boolean;
+  initialOverlay?: OverlayKind;
 }) {
   const router = useRouter();
   const [hovered, setHovered] = useState<DistrictId | null>(null);
@@ -50,7 +52,7 @@ export function GameScreen({
   const [openCategory, setOpenCategory] = useState<Sector | null>(null);
   const [deskOpen, setDeskOpen] = useState(deskStart);
   const [deskTab, setDeskTab] = useState<DeskTab>(initialTab);
-  const [overlay, setOverlay] = useState<OverlayKind>(null);
+  const [overlay, setOverlay] = useState<OverlayKind>(initialOverlay);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle", message: null });
   const [serverNow, setServerNow] = useState(ctx.round?.serverNow ?? new Date().toISOString());
   const [roundStatus, setRoundStatus] = useState(ctx.round?.status ?? "none");
