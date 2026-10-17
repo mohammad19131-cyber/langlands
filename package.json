@@ -1,0 +1,25 @@
+{
+  "name": "langlands",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/sim",
+    "packages/round-machine"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @langlands/web",
+    "build": "npm run build -w @langlands/web",
+    "lint": "npm run lint -w @langlands/web",
+    "typecheck": "npm run typecheck -w @langlands/sim && npm run typecheck -w @langlands/round-machine && npm run typecheck -w @langlands/web",
+    "test:sim": "npm test -w @langlands/sim",
+    "test:db": "vitest run --config supabase/tests/vitest.config.ts",
+    "seed:sql": "packages/sim/node_modules/.bin/vite-node --config packages/sim/vitest.config.ts supabase/scripts/generate-seed.ts"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.11",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

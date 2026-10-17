@@ -1,0 +1,1568 @@
+{
+  "engine_version": "py-ref-1.1.0",
+  "weights": {
+    "ecology": 0.4,
+    "welfare": 0.25,
+    "economy": 0.15,
+    "resilience": 0.1,
+    "efficiency": 0.1
+  },
+  "named": [
+    {
+      "name": "habitat_early",
+      "family": "mixed",
+      "score": 60.2,
+      "ecology": 60.08,
+      "welfare": 61.11,
+      "economy": 56.41,
+      "resilience": 61.85,
+      "efficiency": 92.83,
+      "penalty": 0.0,
+      "completed": [
+        "REFOREST",
+        "WETLAND"
+      ],
+      "hash": "ffce7b933a8badf5836d12fcf3968c46cbf9231dc302036f640ea43f186a3518"
+    },
+    {
+      "name": "restore_habitat",
+      "family": "mixed",
+      "score": 59.92,
+      "ecology": 60.25,
+      "welfare": 60.49,
+      "economy": 55.72,
+      "resilience": 61.44,
+      "efficiency": 92.95,
+      "penalty": 0.0,
+      "completed": [
+        "REFOREST",
+        "RIVER",
+        "WETLAND"
+      ],
+      "hash": "348c90b79f07b32ad66061569c2d05bf1c93236818ea290c9f334e1517212c1a"
+    },
+    {
+      "name": "prudent_habitat",
+      "family": "mixed",
+      "score": 59.82,
+      "ecology": 57.37,
+      "welfare": 63.54,
+      "economy": 58.23,
+      "resilience": 64.22,
+      "efficiency": 92.52,
+      "penalty": 0.0,
+      "completed": [
+        "REFOREST",
+        "WETLAND"
+      ],
+      "hash": "fcf9273bcff964853e3e435c6f712bab40183182c604cfafb8667806ac57b7f8"
+    },
+    {
+      "name": "regen_wetland",
+      "family": "mixed",
+      "score": 59.44,
+      "ecology": 57.23,
+      "welfare": 61.2,
+      "economy": 57.47,
+      "resilience": 62.03,
+      "efficiency": 92.69,
+      "penalty": 0.0,
+      "completed": [
+        "REGEN_AG",
+        "WETLAND"
+      ],
+      "hash": "58af6d7f28e2ef992cc3fc636bc022d3e3fd15404731869c5b5fc59d1649e42d"
+    },
+    {
+      "name": "balanced_mix",
+      "family": "mixed",
+      "score": 59.3,
+      "ecology": 54.63,
+      "welfare": 64.17,
+      "economy": 58.67,
+      "resilience": 64.74,
+      "efficiency": 92.45,
+      "penalty": 0.0,
+      "completed": [
+        "RIVER",
+        "WETLAND"
+      ],
+      "hash": "a8db1e7c0607ba86406fe7206bc8fd78e32e52a644912918cdec2b18fcdcf872"
+    },
+    {
+      "name": "restore_then_grow",
+      "family": "mixed",
+      "score": 59.07,
+      "ecology": 54.31,
+      "welfare": 62.73,
+      "economy": 58.05,
+      "resilience": 62.26,
+      "efficiency": 92.56,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "7be3d51181b991e4a88f00e6a719159d5d29af0e6483ffcdfe3f0ae9c11c1ad9"
+    },
+    {
+      "name": "green_with_restore",
+      "family": "mixed",
+      "score": 58.55,
+      "ecology": 53.73,
+      "welfare": 63.12,
+      "economy": 61.36,
+      "resilience": 62.71,
+      "efficiency": 92.3,
+      "penalty": 0.0,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID",
+        "WETLAND"
+      ],
+      "hash": "4993c3c66db982f50cd8091e8fb7994071b889d1d8cf3a7fde583170f65dfd30"
+    },
+    {
+      "name": "prudent_flood",
+      "family": "mixed",
+      "score": 58.5,
+      "ecology": 52.36,
+      "welfare": 63.34,
+      "economy": 58.69,
+      "resilience": 68.47,
+      "efficiency": 92.48,
+      "penalty": 0.0,
+      "completed": [
+        "FLOOD_WALL",
+        "WETLAND"
+      ],
+      "hash": "239c3ee05c31c6323e6d706279804aaf1734e2011bb0afded36381a2651f9d31"
+    },
+    {
+      "name": "prudent_buffer",
+      "family": "mixed",
+      "score": 58.41,
+      "ecology": 49.58,
+      "welfare": 66.13,
+      "economy": 61.46,
+      "resilience": 65.12,
+      "efficiency": 92.03,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "59badedce1d466270fd952a83db16c2d1c3498e28a03cf6e9cc3f9d536b51a0f"
+    },
+    {
+      "name": "adaptive_lowest",
+      "family": "mixed",
+      "score": 58.23,
+      "ecology": 53.87,
+      "welfare": 61.02,
+      "economy": 58.48,
+      "resilience": 60.02,
+      "efficiency": 90.96,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "a1c0de42c911bdb88cd4381497d0eecc609e1d4d04f7aafc3964c7dfbc9313af"
+    },
+    {
+      "name": "river_scrub",
+      "family": "mixed",
+      "score": 58.08,
+      "ecology": 54.36,
+      "welfare": 60.51,
+      "economy": 55.85,
+      "resilience": 60.51,
+      "efficiency": 92.9,
+      "penalty": 0.0,
+      "completed": [
+        "EMISSIONS",
+        "RIVER"
+      ],
+      "hash": "81ef54e22472776e05a0f341589955eaf801d9ef61b9b0ffd3e1e6e28778390c"
+    },
+    {
+      "name": "flood_pack",
+      "family": "mixed",
+      "score": 58.05,
+      "ecology": 51.05,
+      "welfare": 62.74,
+      "economy": 55.42,
+      "resilience": 74.74,
+      "efficiency": 91.59,
+      "penalty": 0.0,
+      "completed": [
+        "FLOOD_WALL",
+        "WETLAND"
+      ],
+      "hash": "8761eb122362957d9bfabe57e75abdd1ab2ff666e152709fa9f5a84ce27241f0"
+    },
+    {
+      "name": "green_industry",
+      "family": "mixed",
+      "score": 57.72,
+      "ecology": 47.23,
+      "welfare": 65.04,
+      "economy": 65.47,
+      "resilience": 64.03,
+      "efficiency": 91.62,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "24add93d8a715db1b75ac5e130dd8713cf922d4449ed1105689c3af9823fbac5"
+    },
+    {
+      "name": "resilience_max",
+      "family": "mixed",
+      "score": 57.68,
+      "ecology": 47.75,
+      "welfare": 65.11,
+      "economy": 57.5,
+      "resilience": 72.1,
+      "efficiency": 91.23,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "bbed65425da9c706bfb79f4acc3571d06862b08b6d026d412da34ce00da18490"
+    },
+    {
+      "name": "reactive",
+      "family": "mixed",
+      "score": 57.67,
+      "ecology": 48.4,
+      "welfare": 64.1,
+      "economy": 59.27,
+      "resilience": 68.15,
+      "efficiency": 92.42,
+      "penalty": 0.0,
+      "completed": [
+        "FLOOD_WALL",
+        "WATER_TREAT"
+      ],
+      "hash": "8ecd7c2d6d7a4553c28d8bbc753dcf790b406e702041d494d07611d8431ee6e0"
+    },
+    {
+      "name": "balanced",
+      "family": "mixed",
+      "score": 57.47,
+      "ecology": 45.64,
+      "welfare": 67.25,
+      "economy": 64.45,
+      "resilience": 63.11,
+      "efficiency": 91.75,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "92dccd72eaeeb31f6bff4aca4a9c7fad9e91378047cca0b6e679d963d6dacc9b"
+    },
+    {
+      "name": "green_industry_path",
+      "family": "mixed",
+      "score": 56.81,
+      "ecology": 47.24,
+      "welfare": 63.03,
+      "economy": 66.23,
+      "resilience": 61.17,
+      "efficiency": 91.71,
+      "penalty": 0.0,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ],
+      "hash": "3a745b07da3d14f3ca44e3ecba42ad848a0153bf92f05052c926abbb77fd0843"
+    },
+    {
+      "name": "green_path",
+      "family": "mixed",
+      "score": 55.39,
+      "ecology": 45.89,
+      "welfare": 60.53,
+      "economy": 66.39,
+      "resilience": 59.53,
+      "efficiency": 92.03,
+      "penalty": 0.0,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID",
+        "RENEWABLES"
+      ],
+      "hash": "eb6728ef6661f137fb6ae478e5a6d07596bdc605ef19090d2c14214ec9cfcd0b"
+    },
+    {
+      "name": "welfare_max",
+      "family": "dump",
+      "score": 54.72,
+      "ecology": 39.93,
+      "welfare": 71.29,
+      "economy": 50.5,
+      "resilience": 62.76,
+      "efficiency": 90.9,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "6ddf05eb6027fe92dc96b46b8650e0f16d759a1ff27ecadeaea2c92cb16dec4c"
+    },
+    {
+      "name": "health_water",
+      "family": "mixed",
+      "score": 54.53,
+      "ecology": 41.03,
+      "welfare": 69.93,
+      "economy": 48.39,
+      "resilience": 62.17,
+      "efficiency": 91.45,
+      "penalty": 0.0,
+      "completed": [
+        "CLINICS",
+        "WASTEWATER",
+        "WATER_TREAT"
+      ],
+      "hash": "7ce7cdc1ece93db29de3e5286c92c4b591f723b2d70088bc56ce20cbb7653d5f"
+    },
+    {
+      "name": "clean_grid",
+      "family": "mixed",
+      "score": 54.04,
+      "ecology": 41.59,
+      "welfare": 60.02,
+      "economy": 64.51,
+      "resilience": 61.33,
+      "efficiency": 92.45,
+      "penalty": 0.0,
+      "completed": [
+        "CLINICS",
+        "GRID",
+        "RENEWABLES"
+      ],
+      "hash": "a9a1d03118a3de7f078322c865eef14926cc3528a336b3de0ca243227a19728e"
+    },
+    {
+      "name": "grow_then_restore",
+      "family": "mixed",
+      "score": 53.69,
+      "ecology": 40.64,
+      "welfare": 66.3,
+      "economy": 67.46,
+      "resilience": 62.1,
+      "efficiency": 90.01,
+      "penalty": 0.0,
+      "completed": [],
+      "hash": "0c40a64ebddd1f4b9c657d1720d551d04a9877f3998b0afe5b651420f2b7109f"
+    },
+    {
+      "name": "starve_economy",
+      "family": "dump",
+      "score": 53.07,
+      "ecology": 61.52,
+      "welfare": 54.66,
+      "economy": 33.0,
+      "resilience": 61.81,
+      "efficiency": 94.23,
+      "penalty": 4.9,
+      "completed": [],
+      "hash": "bd1ec6b313bf5f83376a0645614e5fd9601c9d5781eba21a06365f47202752a8"
+    },
+    {
+      "name": "eco_max",
+      "family": "dump",
+      "score": 51.31,
+      "ecology": 75.17,
+      "welfare": 47.28,
+      "economy": 28.66,
+      "resilience": 55.81,
+      "efficiency": 77.88,
+      "penalty": 7.94,
+      "completed": [],
+      "hash": "def6880f14f26cf5ec139bbc98fa94f091f758abb013ec6ca6f95f8be48e7d8f"
+    },
+    {
+      "name": "hoard",
+      "family": "dump",
+      "score": 44.59,
+      "ecology": 35.59,
+      "welfare": 54.2,
+      "economy": 53.79,
+      "resilience": 54.84,
+      "efficiency": 53.97,
+      "penalty": 0.26,
+      "completed": [],
+      "hash": "6fbea3f966140c91a35788f7001b82e6c6c92d3ef4473e6888cead01eb0d1379"
+    },
+    {
+      "name": "starve_ecology",
+      "family": "dump",
+      "score": 30.04,
+      "ecology": 6.82,
+      "welfare": 70.21,
+      "economy": 75.32,
+      "resilience": 64.55,
+      "efficiency": 87.18,
+      "penalty": 18.09,
+      "completed": [],
+      "hash": "1b4088a86c6587870b17c29365d3e488fb20808653103a477b02f884f3db3009"
+    },
+    {
+      "name": "industry_max",
+      "family": "dump",
+      "score": 26.15,
+      "ecology": 5.01,
+      "welfare": 61.3,
+      "economy": 78.32,
+      "resilience": 60.2,
+      "efficiency": 84.25,
+      "penalty": 19.21,
+      "completed": [],
+      "hash": "7c8523b1a9a164799866ac2513f2d38853df654df1f0e38c56bd2c065f6c677f"
+    },
+    {
+      "name": "coal_rush",
+      "family": "mixed",
+      "score": 25.9,
+      "ecology": 4.75,
+      "welfare": 59.97,
+      "economy": 81.85,
+      "resilience": 58.83,
+      "efficiency": 84.73,
+      "penalty": 19.37,
+      "completed": [
+        "COAL",
+        "GRID"
+      ],
+      "hash": "6fd678489115b3275e2e792a3865a03e9449e421a73954aa151ea17040ab3a35"
+    },
+    {
+      "name": "intense_industry",
+      "family": "mixed",
+      "score": 24.06,
+      "ecology": 3.11,
+      "welfare": 59.68,
+      "economy": 78.61,
+      "resilience": 58.06,
+      "efficiency": 84.7,
+      "penalty": 20.39,
+      "completed": [
+        "FACTORIES",
+        "GRID",
+        "INTENSE_AG"
+      ],
+      "hash": "c02ebdcb0d013cc9cf5418b1431aee7e656a949f55957af93b6c10fcbde33f61"
+    },
+    {
+      "name": "silent_hold",
+      "family": "dump",
+      "score": 6.42,
+      "ecology": 12.95,
+      "welfare": 27.36,
+      "economy": 27.52,
+      "resilience": 41.41,
+      "efficiency": 47.5,
+      "penalty": 30.49,
+      "completed": [],
+      "hash": "c9dcd90e7e04d4aa45907ec3640f15807276fc91ae2d16d78f202a1294a09f28"
+    }
+  ],
+  "named_winner": {
+    "name": "habitat_early",
+    "family": "mixed",
+    "score": 60.2,
+    "ecology": 60.08,
+    "welfare": 61.11,
+    "economy": 56.41,
+    "resilience": 61.85,
+    "efficiency": 92.83,
+    "penalty": 0.0,
+    "completed": [
+      "REFOREST",
+      "WETLAND"
+    ],
+    "hash": "ffce7b933a8badf5836d12fcf3968c46cbf9231dc302036f640ea43f186a3518"
+  },
+  "named_gap": 0.28,
+  "singles": [
+    {
+      "project": "WETLAND",
+      "score": 58.86,
+      "completed": [
+        "WETLAND"
+      ],
+      "started": [
+        "WETLAND"
+      ]
+    },
+    {
+      "project": "REFOREST",
+      "score": 58.06,
+      "completed": [
+        "REFOREST"
+      ],
+      "started": [
+        "REFOREST"
+      ]
+    },
+    {
+      "project": "WASTEWATER",
+      "score": 57.59,
+      "completed": [
+        "WASTEWATER"
+      ],
+      "started": [
+        "WASTEWATER"
+      ]
+    },
+    {
+      "project": "RIVER",
+      "score": 57.51,
+      "completed": [
+        "RIVER"
+      ],
+      "started": [
+        "RIVER"
+      ]
+    },
+    {
+      "project": "WATER_TREAT",
+      "score": 57.47,
+      "completed": [
+        "WATER_TREAT"
+      ],
+      "started": [
+        "WATER_TREAT"
+      ]
+    },
+    {
+      "project": "EMISSIONS",
+      "score": 57.28,
+      "completed": [
+        "EMISSIONS"
+      ],
+      "started": [
+        "EMISSIONS"
+      ]
+    },
+    {
+      "project": "REGEN_AG",
+      "score": 57.25,
+      "completed": [
+        "REGEN_AG"
+      ],
+      "started": [
+        "REGEN_AG"
+      ]
+    },
+    {
+      "project": "GREEN_MFG",
+      "score": 56.81,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ],
+      "started": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ]
+    },
+    {
+      "project": "FLOOD_WALL",
+      "score": 56.77,
+      "completed": [
+        "FLOOD_WALL"
+      ],
+      "started": [
+        "FLOOD_WALL"
+      ]
+    },
+    {
+      "project": "GRID",
+      "score": 56.7,
+      "completed": [
+        "GRID"
+      ],
+      "started": [
+        "GRID"
+      ]
+    },
+    {
+      "project": "CLINICS",
+      "score": 56.57,
+      "completed": [
+        "CLINICS"
+      ],
+      "started": [
+        "CLINICS"
+      ]
+    },
+    {
+      "project": "FACTORIES",
+      "score": 56.01,
+      "completed": [
+        "FACTORIES",
+        "GRID"
+      ],
+      "started": [
+        "FACTORIES",
+        "GRID"
+      ]
+    },
+    {
+      "project": "INTENSE_AG",
+      "score": 55.78,
+      "completed": [
+        "INTENSE_AG"
+      ],
+      "started": [
+        "INTENSE_AG"
+      ]
+    },
+    {
+      "project": "RENEWABLES",
+      "score": 55.25,
+      "completed": [
+        "GRID",
+        "RENEWABLES"
+      ],
+      "started": [
+        "GRID",
+        "RENEWABLES"
+      ]
+    },
+    {
+      "project": "COAL",
+      "score": 53.85,
+      "completed": [
+        "COAL",
+        "GRID"
+      ],
+      "started": [
+        "COAL",
+        "GRID"
+      ]
+    }
+  ],
+  "best_single": {
+    "project": "WETLAND",
+    "score": 58.86,
+    "completed": [
+      "WETLAND"
+    ],
+    "started": [
+      "WETLAND"
+    ]
+  },
+  "worst_single": {
+    "project": "COAL",
+    "score": 53.85,
+    "completed": [
+      "COAL",
+      "GRID"
+    ],
+    "started": [
+      "COAL",
+      "GRID"
+    ]
+  },
+  "pairs_n": 105,
+  "best_pairs": [
+    {
+      "pair": "WETLAND+REFOREST",
+      "score": 59.22,
+      "completed": [
+        "REFOREST",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+WASTEWATER",
+      "score": 58.76,
+      "completed": [
+        "WASTEWATER",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+RIVER",
+      "score": 58.68,
+      "completed": [
+        "RIVER",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+WATER_TREAT",
+      "score": 58.62,
+      "completed": [
+        "WATER_TREAT",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+EMISSIONS",
+      "score": 58.44,
+      "completed": [
+        "EMISSIONS",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+REGEN_AG",
+      "score": 58.42,
+      "completed": [
+        "REGEN_AG",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "WETLAND+GREEN_MFG",
+      "score": 58.02,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID",
+        "WETLAND"
+      ]
+    },
+    {
+      "pair": "REFOREST+WASTEWATER",
+      "score": 57.97,
+      "completed": [
+        "REFOREST",
+        "WASTEWATER"
+      ]
+    }
+  ],
+  "worst_pairs": [
+    {
+      "pair": "COAL+INTENSE_AG",
+      "score": 51.31,
+      "completed": [
+        "COAL",
+        "GRID",
+        "INTENSE_AG"
+      ]
+    },
+    {
+      "pair": "COAL+CLINICS",
+      "score": 52.68,
+      "completed": [
+        "CLINICS",
+        "COAL",
+        "GRID"
+      ]
+    },
+    {
+      "pair": "COAL+FLOOD_WALL",
+      "score": 52.96,
+      "completed": [
+        "COAL",
+        "FLOOD_WALL",
+        "GRID"
+      ]
+    },
+    {
+      "pair": "COAL+FACTORIES",
+      "score": 53.2,
+      "completed": [
+        "COAL",
+        "FACTORIES",
+        "GRID"
+      ]
+    },
+    {
+      "pair": "RENEWABLES+INTENSE_AG",
+      "score": 53.24,
+      "completed": [
+        "GRID",
+        "INTENSE_AG",
+        "RENEWABLES"
+      ]
+    }
+  ],
+  "flagship_conditions": [
+    {
+      "project": "WETLAND",
+      "operating": "restore_then_grow",
+      "score": 60.05,
+      "ecology": 57.56,
+      "welfare": 62.42,
+      "economy": 57.49,
+      "resilience": 62.94,
+      "efficiency": 92.66,
+      "completed": [
+        "WETLAND"
+      ],
+      "mean_damage": 29.25
+    },
+    {
+      "project": "WETLAND",
+      "operating": "prudent",
+      "score": 59.52,
+      "ecology": 53.86,
+      "welfare": 65.32,
+      "economy": 60.07,
+      "resilience": 65.56,
+      "efficiency": 92.25,
+      "completed": [
+        "WETLAND"
+      ],
+      "mean_damage": 31.04
+    },
+    {
+      "project": "REFOREST",
+      "operating": "restore_then_grow",
+      "score": 59.27,
+      "ecology": 56.76,
+      "welfare": 61.34,
+      "economy": 56.94,
+      "resilience": 61.13,
+      "efficiency": 92.73,
+      "completed": [
+        "REFOREST"
+      ],
+      "mean_damage": 32.35
+    },
+    {
+      "project": "WETLAND",
+      "operating": "green",
+      "score": 58.86,
+      "ecology": 51.62,
+      "welfare": 64.23,
+      "economy": 63.77,
+      "resilience": 64.55,
+      "efficiency": 91.87,
+      "completed": [
+        "WETLAND"
+      ],
+      "mean_damage": 31.55
+    },
+    {
+      "project": "WASTEWATER",
+      "operating": "restore_then_grow",
+      "score": 58.79,
+      "ecology": 53.99,
+      "welfare": 62.65,
+      "economy": 57.14,
+      "resilience": 61.77,
+      "efficiency": 92.7,
+      "completed": [
+        "WASTEWATER"
+      ],
+      "mean_damage": 30.97
+    },
+    {
+      "project": "REFOREST",
+      "operating": "prudent",
+      "score": 58.71,
+      "ecology": 53.0,
+      "welfare": 64.23,
+      "economy": 59.53,
+      "resilience": 63.71,
+      "efficiency": 92.32,
+      "completed": [
+        "REFOREST"
+      ],
+      "mean_damage": 34.19
+    },
+    {
+      "project": "WASTEWATER",
+      "operating": "prudent",
+      "score": 58.24,
+      "ecology": 50.28,
+      "welfare": 65.53,
+      "economy": 59.69,
+      "resilience": 64.35,
+      "efficiency": 92.29,
+      "completed": [
+        "WASTEWATER"
+      ],
+      "mean_damage": 32.75
+    },
+    {
+      "project": "REFOREST",
+      "operating": "green",
+      "score": 58.06,
+      "ecology": 50.78,
+      "welfare": 63.16,
+      "economy": 63.22,
+      "resilience": 62.68,
+      "efficiency": 91.94,
+      "completed": [
+        "REFOREST"
+      ],
+      "mean_damage": 34.74
+    },
+    {
+      "project": "FLOOD_WALL",
+      "operating": "restore_then_grow",
+      "score": 57.97,
+      "ecology": 51.63,
+      "welfare": 61.25,
+      "economy": 57.56,
+      "resilience": 65.59,
+      "efficiency": 92.67,
+      "completed": [
+        "FLOOD_WALL"
+      ],
+      "mean_damage": 29.59
+    },
+    {
+      "project": "GREEN_MFG",
+      "operating": "restore_then_grow",
+      "score": 57.66,
+      "ecology": 51.07,
+      "welfare": 62.09,
+      "economy": 61.87,
+      "resilience": 60.0,
+      "efficiency": 92.26,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ],
+      "mean_damage": 33.23
+    },
+    {
+      "project": "WASTEWATER",
+      "operating": "green",
+      "score": 57.59,
+      "ecology": 48.1,
+      "welfare": 64.45,
+      "economy": 63.36,
+      "resilience": 63.34,
+      "efficiency": 91.91,
+      "completed": [
+        "WASTEWATER"
+      ],
+      "mean_damage": 33.28
+    },
+    {
+      "project": "FLOOD_WALL",
+      "operating": "prudent",
+      "score": 57.44,
+      "ecology": 47.99,
+      "welfare": 64.1,
+      "economy": 60.06,
+      "resilience": 68.21,
+      "efficiency": 92.27,
+      "completed": [
+        "FLOOD_WALL"
+      ],
+      "mean_damage": 31.34
+    },
+    {
+      "project": "GREEN_MFG",
+      "operating": "prudent",
+      "score": 57.42,
+      "ecology": 49.24,
+      "welfare": 64.02,
+      "economy": 62.91,
+      "resilience": 62.09,
+      "efficiency": 92.06,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ],
+      "mean_damage": 34.72
+    },
+    {
+      "project": "GREEN_MFG",
+      "operating": "green",
+      "score": 56.81,
+      "ecology": 47.24,
+      "welfare": 63.03,
+      "economy": 66.23,
+      "resilience": 61.17,
+      "efficiency": 91.71,
+      "completed": [
+        "EMISSIONS",
+        "FACTORIES",
+        "GREEN_MFG",
+        "GRID"
+      ],
+      "mean_damage": 35.18
+    },
+    {
+      "project": "FLOOD_WALL",
+      "operating": "green",
+      "score": 56.77,
+      "ecology": 45.8,
+      "welfare": 63.08,
+      "economy": 63.81,
+      "resilience": 67.24,
+      "efficiency": 91.88,
+      "completed": [
+        "FLOOD_WALL"
+      ],
+      "mean_damage": 31.81
+    }
+  ],
+  "random": {
+    "n": 10000,
+    "seed": 2026,
+    "min": 38.09,
+    "p10": 49.87,
+    "p50": 52.87,
+    "p90": 55.23,
+    "p99": 56.85,
+    "max": 58.86,
+    "mean": 52.635,
+    "stdev": 2.289,
+    "best_index": 6346,
+    "best_completed": [
+      "RIVER",
+      "WASTEWATER",
+      "WETLAND"
+    ],
+    "best_opening": [
+      "RIVER",
+      "WETLAND"
+    ],
+    "unique_openings_in_top": 22,
+    "unique_completed_sets_in_top": 87
+  },
+  "project_lifts": [
+    {
+      "project": "WETLAND",
+      "base_rate": 0.3571,
+      "top_rate": 0.76,
+      "lift": 2.128,
+      "count_top": 76
+    },
+    {
+      "project": "REFOREST",
+      "base_rate": 0.2844,
+      "top_rate": 0.52,
+      "lift": 1.828,
+      "count_top": 52
+    },
+    {
+      "project": "WASTEWATER",
+      "base_rate": 0.3479,
+      "top_rate": 0.39,
+      "lift": 1.121,
+      "count_top": 39
+    },
+    {
+      "project": "REGEN_AG",
+      "base_rate": 0.2804,
+      "top_rate": 0.29,
+      "lift": 1.034,
+      "count_top": 29
+    },
+    {
+      "project": "WATER_TREAT",
+      "base_rate": 0.439,
+      "top_rate": 0.45,
+      "lift": 1.025,
+      "count_top": 45
+    },
+    {
+      "project": "EMISSIONS",
+      "base_rate": 0.3476,
+      "top_rate": 0.3,
+      "lift": 0.863,
+      "count_top": 30
+    },
+    {
+      "project": "RIVER",
+      "base_rate": 0.416,
+      "top_rate": 0.35,
+      "lift": 0.841,
+      "count_top": 35
+    },
+    {
+      "project": "CLINICS",
+      "base_rate": 0.4281,
+      "top_rate": 0.26,
+      "lift": 0.607,
+      "count_top": 26
+    },
+    {
+      "project": "FLOOD_WALL",
+      "base_rate": 0.3478,
+      "top_rate": 0.19,
+      "lift": 0.546,
+      "count_top": 19
+    },
+    {
+      "project": "GRID",
+      "base_rate": 0.4474,
+      "top_rate": 0.2,
+      "lift": 0.447,
+      "count_top": 20
+    },
+    {
+      "project": "INTENSE_AG",
+      "base_rate": 0.3226,
+      "top_rate": 0.07,
+      "lift": 0.217,
+      "count_top": 7
+    },
+    {
+      "project": "COAL",
+      "base_rate": 0.069,
+      "top_rate": 0.0,
+      "lift": 0.0,
+      "count_top": 0
+    },
+    {
+      "project": "RENEWABLES",
+      "base_rate": 0.0266,
+      "top_rate": 0.0,
+      "lift": 0.0,
+      "count_top": 0
+    },
+    {
+      "project": "FACTORIES",
+      "base_rate": 0.0542,
+      "top_rate": 0.0,
+      "lift": 0.0,
+      "count_top": 0
+    },
+    {
+      "project": "GREEN_MFG",
+      "base_rate": 0.0012,
+      "top_rate": 0.0,
+      "lift": 0.0,
+      "count_top": 0
+    }
+  ],
+  "opening_lifts": [
+    {
+      "opening": [],
+      "base_rate": 0.4017,
+      "top_rate": 0.32,
+      "lift": 0.797,
+      "count_top": 32
+    },
+    {
+      "opening": [
+        "WETLAND"
+      ],
+      "base_rate": 0.0382,
+      "top_rate": 0.18,
+      "lift": 4.712,
+      "count_top": 18
+    },
+    {
+      "opening": [
+        "REFOREST"
+      ],
+      "base_rate": 0.0364,
+      "top_rate": 0.06,
+      "lift": 1.648,
+      "count_top": 6
+    },
+    {
+      "opening": [
+        "RIVER",
+        "WETLAND"
+      ],
+      "base_rate": 0.0032,
+      "top_rate": 0.05,
+      "lift": 15.625,
+      "count_top": 5
+    },
+    {
+      "opening": [
+        "WATER_TREAT"
+      ],
+      "base_rate": 0.0362,
+      "top_rate": 0.05,
+      "lift": 1.381,
+      "count_top": 5
+    },
+    {
+      "opening": [
+        "REFOREST",
+        "WETLAND"
+      ],
+      "base_rate": 0.0044,
+      "top_rate": 0.05,
+      "lift": 11.364,
+      "count_top": 5
+    },
+    {
+      "opening": [
+        "WATER_TREAT",
+        "WETLAND"
+      ],
+      "base_rate": 0.0031,
+      "top_rate": 0.05,
+      "lift": 16.129,
+      "count_top": 5
+    },
+    {
+      "opening": [
+        "WASTEWATER"
+      ],
+      "base_rate": 0.0393,
+      "top_rate": 0.03,
+      "lift": 0.763,
+      "count_top": 3
+    },
+    {
+      "opening": [
+        "REGEN_AG",
+        "WETLAND"
+      ],
+      "base_rate": 0.0044,
+      "top_rate": 0.03,
+      "lift": 6.818,
+      "count_top": 3
+    },
+    {
+      "opening": [
+        "FLOOD_WALL",
+        "WETLAND"
+      ],
+      "base_rate": 0.0026,
+      "top_rate": 0.02,
+      "lift": 7.692,
+      "count_top": 2
+    },
+    {
+      "opening": [
+        "REFOREST",
+        "RIVER"
+      ],
+      "base_rate": 0.0044,
+      "top_rate": 0.02,
+      "lift": 4.545,
+      "count_top": 2
+    },
+    {
+      "opening": [
+        "RIVER"
+      ],
+      "base_rate": 0.0325,
+      "top_rate": 0.02,
+      "lift": 0.615,
+      "count_top": 2
+    }
+  ],
+  "targeted": {
+    "n": 5000,
+    "seed": 4040,
+    "min": 50.72,
+    "p50": 56.51,
+    "p90": 58.18,
+    "p99": 59.33,
+    "max": 60.41,
+    "mean": 56.393,
+    "best_index": 3063,
+    "best_completed": [
+      "REFOREST",
+      "RIVER",
+      "WETLAND"
+    ],
+    "best_ecology": 62.59,
+    "best_welfare": 59.98,
+    "best_economy": 50.99
+  },
+  "pairwise_top8": [
+    {
+      "a": "habitat_early",
+      "b": "restore_habitat",
+      "gap": 0.28,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "prudent_habitat",
+      "gap": 0.38,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "regen_wetland",
+      "gap": 0.76,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "balanced_mix",
+      "gap": 0.9,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "restore_then_grow",
+      "gap": 1.13,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "green_with_restore",
+      "gap": 1.65,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "habitat_early",
+      "b": "prudent_flood",
+      "gap": 1.7,
+      "winner": "habitat_early"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "prudent_habitat",
+      "gap": 0.1,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "regen_wetland",
+      "gap": 0.48,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "balanced_mix",
+      "gap": 0.62,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "restore_then_grow",
+      "gap": 0.85,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "green_with_restore",
+      "gap": 1.37,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "restore_habitat",
+      "b": "prudent_flood",
+      "gap": 1.42,
+      "winner": "restore_habitat"
+    },
+    {
+      "a": "prudent_habitat",
+      "b": "regen_wetland",
+      "gap": 0.38,
+      "winner": "prudent_habitat"
+    },
+    {
+      "a": "prudent_habitat",
+      "b": "balanced_mix",
+      "gap": 0.52,
+      "winner": "prudent_habitat"
+    },
+    {
+      "a": "prudent_habitat",
+      "b": "restore_then_grow",
+      "gap": 0.75,
+      "winner": "prudent_habitat"
+    },
+    {
+      "a": "prudent_habitat",
+      "b": "green_with_restore",
+      "gap": 1.27,
+      "winner": "prudent_habitat"
+    },
+    {
+      "a": "prudent_habitat",
+      "b": "prudent_flood",
+      "gap": 1.32,
+      "winner": "prudent_habitat"
+    },
+    {
+      "a": "regen_wetland",
+      "b": "balanced_mix",
+      "gap": 0.14,
+      "winner": "regen_wetland"
+    },
+    {
+      "a": "regen_wetland",
+      "b": "restore_then_grow",
+      "gap": 0.37,
+      "winner": "regen_wetland"
+    },
+    {
+      "a": "regen_wetland",
+      "b": "green_with_restore",
+      "gap": 0.89,
+      "winner": "regen_wetland"
+    },
+    {
+      "a": "regen_wetland",
+      "b": "prudent_flood",
+      "gap": 0.94,
+      "winner": "regen_wetland"
+    },
+    {
+      "a": "balanced_mix",
+      "b": "restore_then_grow",
+      "gap": 0.23,
+      "winner": "balanced_mix"
+    },
+    {
+      "a": "balanced_mix",
+      "b": "green_with_restore",
+      "gap": 0.75,
+      "winner": "balanced_mix"
+    },
+    {
+      "a": "balanced_mix",
+      "b": "prudent_flood",
+      "gap": 0.8,
+      "winner": "balanced_mix"
+    },
+    {
+      "a": "restore_then_grow",
+      "b": "green_with_restore",
+      "gap": 0.52,
+      "winner": "restore_then_grow"
+    },
+    {
+      "a": "restore_then_grow",
+      "b": "prudent_flood",
+      "gap": 0.57,
+      "winner": "restore_then_grow"
+    },
+    {
+      "a": "green_with_restore",
+      "b": "prudent_flood",
+      "gap": 0.05,
+      "winner": "green_with_restore"
+    }
+  ],
+  "sensitivity": {
+    "baseline": {
+      "habitat_early": 60.2,
+      "restore_habitat": 59.92,
+      "prudent_habitat": 59.82,
+      "regen_wetland": 59.44,
+      "balanced_mix": 59.3,
+      "restore_then_grow": 59.07,
+      "prudent_buffer": 58.41
+    },
+    "variants": {
+      "sat_scale_0.9": {
+        "scores": {
+          "habitat_early": 62.03,
+          "restore_habitat": 61.63,
+          "prudent_habitat": 61.78,
+          "regen_wetland": 61.33,
+          "balanced_mix": 61.29,
+          "restore_then_grow": 61.26,
+          "prudent_buffer": 60.78
+        },
+        "rank_changes": {
+          "restore_habitat": [
+            2,
+            3
+          ],
+          "prudent_habitat": [
+            3,
+            2
+          ]
+        },
+        "winner": "habitat_early"
+      },
+      "sat_scale_1.1": {
+        "scores": {
+          "habitat_early": 58.69,
+          "restore_habitat": 58.52,
+          "prudent_habitat": 58.22,
+          "regen_wetland": 57.88,
+          "balanced_mix": 57.67,
+          "restore_then_grow": 57.26,
+          "prudent_buffer": 56.47
+        },
+        "rank_changes": {},
+        "winner": "habitat_early"
+      },
+      "neglect_0.14": {
+        "scores": {
+          "habitat_early": 60.2,
+          "restore_habitat": 59.92,
+          "prudent_habitat": 59.82,
+          "regen_wetland": 59.44,
+          "balanced_mix": 59.3,
+          "restore_then_grow": 59.07,
+          "prudent_buffer": 58.41
+        },
+        "rank_changes": {},
+        "winner": "habitat_early"
+      },
+      "neglect_0.18": {
+        "scores": {
+          "habitat_early": 60.2,
+          "restore_habitat": 59.92,
+          "prudent_habitat": 59.82,
+          "regen_wetland": 59.44,
+          "balanced_mix": 59.3,
+          "restore_then_grow": 59.07,
+          "prudent_buffer": 58.41
+        },
+        "rank_changes": {},
+        "winner": "habitat_early"
+      },
+      "event_scale_0.9": {
+        "scores": {
+          "habitat_early": 60.75,
+          "restore_habitat": 60.46,
+          "prudent_habitat": 60.41,
+          "regen_wetland": 60.0,
+          "balanced_mix": 59.88,
+          "restore_then_grow": 59.67,
+          "prudent_buffer": 59.05
+        },
+        "rank_changes": {},
+        "winner": "habitat_early"
+      },
+      "event_scale_1.1": {
+        "scores": {
+          "habitat_early": 59.64,
+          "restore_habitat": 59.37,
+          "prudent_habitat": 59.22,
+          "regen_wetland": 58.87,
+          "balanced_mix": 58.71,
+          "restore_then_grow": 58.47,
+          "prudent_buffer": 57.76
+        },
+        "rank_changes": {},
+        "winner": "habitat_early"
+      }
+    }
+  },
+  "gate": {
+    "win_gap": 0.28,
+    "win_gap_ok": true,
+    "winner": "habitat_early",
+    "winner_is_mixed": true,
+    "best_dump": 54.72,
+    "dump_margin_ok": true,
+    "random_max": 58.86,
+    "random_max_ok": true,
+    "high_project_lifts": [],
+    "opening_concentration": [],
+    "random_beats_named_by_half_point": false,
+    "top1_completed_diversity": 87,
+    "pass": true,
+    "best_operating": {
+      "name": "restore_then_grow",
+      "score": 59.07
+    },
+    "best_with_projects": {
+      "name": "habitat_early",
+      "score": 60.2,
+      "completed": [
+        "REFOREST",
+        "WETLAND"
+      ]
+    },
+    "a11_gap": 1.13,
+    "a11_breakaway_ok": true,
+    "catalogue_freeze_ok": true,
+    "notes": "Dominance gate uses named win-gap, mixed winner, dump margin, opening concentration, and top-1% recipe diversity. A11 freeze additionally requires the best named project path to beat the best operating-only path by \u2265 1.0. random_max_ok is diagnostic, not sufficient for balance."
+  }
+}

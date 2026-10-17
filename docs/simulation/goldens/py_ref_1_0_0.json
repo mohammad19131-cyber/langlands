@@ -1,0 +1,56 @@
+{
+  "balanced": {
+    "hash": "6efc3e9544f716de035b0fa4693e1a259b8a21f2ba1039694afd6c6f76712c10",
+    "score": 55.92,
+    "snaps": [
+      44.57833,
+      47.76027,
+      49.374044,
+      51.560326,
+      54.647615,
+      58.860909
+    ]
+  },
+  "engine_version": "py-ref-1.0.0",
+  "grid_then_coal": {
+    "completed": {
+      "CLINICS": 1,
+      "COAL": 2,
+      "GRID": 1
+    },
+    "hash": "44da11658e175c9c3806eed8d835a5e0ba4c09c3a509c95aa8b819654a5b4f84",
+    "score": 52.34,
+    "started": {
+      "CLINICS": 1,
+      "COAL": 2,
+      "GRID": 1
+    }
+  },
+  "silent": {
+    "hash": "5b21529f023a215979440e3e0e3f2d2e7d531beffe7511d320c1e9dec70d53e9",
+    "score": 6.42,
+    "shock_log": [
+      0.0,
+      45.272136507,
+      45.48517822460868,
+      48.59135485066294,
+      44.23740448240458,
+      0.0
+    ],
+    "snaps": [
+      35.985729,
+      31.843892,
+      22.15898,
+      11.042707,
+      0.343893,
+      0.0
+    ]
+  },
+  "weights": {
+    "ecology": 0.4,
+    "economy": 0.15,
+    "efficiency": 0.1,
+    "resilience": 0.1,
+    "welfare": 0.25
+  }
+}

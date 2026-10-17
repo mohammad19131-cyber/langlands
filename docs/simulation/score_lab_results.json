@@ -1,0 +1,327 @@
+{
+  "dominance": {
+    "winner": "prudent_buffer",
+    "winner_score": 61.53,
+    "runner_up": "resilience_max",
+    "win_gap": 0.59,
+    "full_spread": 24.53,
+    "mixed_band": 2.93,
+    "best_dump": 60.94,
+    "mixed_beats_best_dump": false,
+    "no_dominant_strategy": true,
+    "ranking": [
+      [
+        "prudent_buffer",
+        61.53
+      ],
+      [
+        "resilience_max",
+        60.94
+      ],
+      [
+        "green_industry",
+        60.46
+      ],
+      [
+        "adaptive_lowest_pillar",
+        60.21
+      ],
+      [
+        "even_pair_ecology_economy",
+        60.21
+      ],
+      [
+        "balanced",
+        60.14
+      ],
+      [
+        "restore_then_grow",
+        59.88
+      ],
+      [
+        "grow_then_restore",
+        58.6
+      ],
+      [
+        "welfare_max",
+        56.7
+      ],
+      [
+        "starve_economy",
+        55.5
+      ],
+      [
+        "eco_max",
+        52.69
+      ],
+      [
+        "hoard",
+        50.86
+      ],
+      [
+        "starve_ecology",
+        40.79
+      ],
+      [
+        "industry_max",
+        37.0
+      ]
+    ]
+  },
+  "pillars": [
+    {
+      "strategy": "balanced",
+      "score": 60.14,
+      "ecology": 50.27,
+      "welfare": 70.18,
+      "economy": 65.97,
+      "resilience": 52.6,
+      "shock": 80.83,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "adaptive_lowest_pillar",
+      "score": 60.21,
+      "ecology": 54.38,
+      "welfare": 67.59,
+      "economy": 57.55,
+      "resilience": 56.58,
+      "shock": 82.45,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "restore_then_grow",
+      "score": 59.88,
+      "ecology": 59.58,
+      "welfare": 64.84,
+      "economy": 58.38,
+      "resilience": 50.77,
+      "shock": 82.48,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "grow_then_restore",
+      "score": 58.6,
+      "ecology": 44.06,
+      "welfare": 69.29,
+      "economy": 69.59,
+      "resilience": 53.87,
+      "shock": 78.72,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "even_pair_ecology_economy",
+      "score": 60.21,
+      "ecology": 52.41,
+      "welfare": 68.33,
+      "economy": 65.96,
+      "resilience": 52.33,
+      "shock": 80.78,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "green_industry",
+      "score": 60.46,
+      "ecology": 51.92,
+      "welfare": 67.86,
+      "economy": 67.01,
+      "resilience": 53.44,
+      "shock": 81.24,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "prudent_buffer",
+      "score": 61.53,
+      "ecology": 52.09,
+      "welfare": 66.44,
+      "economy": 60.82,
+      "resilience": 65.6,
+      "shock": 80.89,
+      "reserve": 300.0
+    },
+    {
+      "strategy": "eco_max",
+      "score": 52.69,
+      "ecology": 78.12,
+      "welfare": 48.31,
+      "economy": 28.01,
+      "resilience": 43.91,
+      "shock": 83.32,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "industry_max",
+      "score": 37.0,
+      "ecology": 7.6,
+      "welfare": 62.52,
+      "economy": 79.53,
+      "resilience": 45.43,
+      "shock": 75.71,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "welfare_max",
+      "score": 56.7,
+      "ecology": 44.1,
+      "welfare": 73.57,
+      "economy": 50.97,
+      "resilience": 50.59,
+      "shock": 80.77,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "resilience_max",
+      "score": 60.94,
+      "ecology": 52.34,
+      "welfare": 67.38,
+      "economy": 58.1,
+      "resilience": 63.45,
+      "shock": 82.3,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "starve_ecology",
+      "score": 40.79,
+      "ecology": 9.36,
+      "welfare": 71.73,
+      "economy": 76.45,
+      "resilience": 51.76,
+      "shock": 76.78,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "starve_economy",
+      "score": 55.5,
+      "ecology": 66.45,
+      "welfare": 56.42,
+      "economy": 32.62,
+      "resilience": 50.64,
+      "shock": 82.77,
+      "reserve": 0.0
+    },
+    {
+      "strategy": "hoard",
+      "score": 50.86,
+      "ecology": 40.16,
+      "welfare": 56.87,
+      "economy": 54.99,
+      "resilience": 39.96,
+      "shock": 78.27,
+      "reserve": 1640.2
+    }
+  ],
+  "snapshots": {
+    "balanced": [
+      43.07,
+      45.39,
+      48.4,
+      51.0,
+      54.56,
+      59.37
+    ],
+    "adaptive_lowest_pillar": [
+      43.04,
+      46.07,
+      49.27,
+      52.04,
+      55.53,
+      58.84
+    ],
+    "restore_then_grow": [
+      43.24,
+      45.97,
+      49.07,
+      51.45,
+      54.43,
+      58.44
+    ],
+    "grow_then_restore": [
+      42.04,
+      41.34,
+      42.15,
+      47.28,
+      53.28,
+      58.59
+    ],
+    "even_pair_ecology_economy": [
+      43.04,
+      45.45,
+      48.5,
+      51.13,
+      54.68,
+      59.46
+    ],
+    "green_industry": [
+      43.1,
+      45.47,
+      48.53,
+      51.2,
+      54.86,
+      59.73
+    ],
+    "prudent_buffer": [
+      45.23,
+      47.4,
+      50.37,
+      52.88,
+      56.29,
+      60.87
+    ],
+    "eco_max": [
+      42.43,
+      44.35,
+      46.25,
+      47.38,
+      48.06,
+      47.85
+    ],
+    "industry_max": [
+      38.24,
+      33.29,
+      31.86,
+      27.68,
+      28.28,
+      29.56
+    ],
+    "welfare_max": [
+      43.1,
+      44.97,
+      47.33,
+      48.93,
+      51.22,
+      54.38
+    ],
+    "resilience_max": [
+      43.51,
+      46.15,
+      49.32,
+      52.08,
+      55.55,
+      60.0
+    ],
+    "starve_ecology": [
+      39.35,
+      35.52,
+      34.65,
+      32.39,
+      32.29,
+      34.3
+    ],
+    "starve_economy": [
+      43.0,
+      44.99,
+      47.04,
+      48.32,
+      50.01,
+      52.13
+    ],
+    "hoard": [
+      38.56,
+      39.63,
+      41.63,
+      42.63,
+      44.52,
+      47.68
+    ]
+  }
+}

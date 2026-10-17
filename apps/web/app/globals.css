@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --grain:
+    repeating-linear-gradient(
+      0deg,
+      rgba(20, 37, 29, 0.014) 0px,
+      rgba(20, 37, 29, 0.014) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+}
+
+html {
+  background: #f4f2eb;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  color: #14251d;
+  background-image: var(--grain);
+  background-attachment: fixed;
+}
+
+/* Fraunces optical sizing for editorial display */
+.font-serif {
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 40;
+}
+
+h1,
+h2,
+h3 {
+  font-feature-settings: "ss01";
+}
+
+::selection {
+  background: rgba(184, 154, 96, 0.3);
+  color: #14251d;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #937840;
+  outline-offset: 2px;
+  border-radius: 1px;
+}
+
+/* ---- Design-system component layer ---------------------------------- */
+@layer components {
+  .eyebrow {
+    @apply font-sans text-eyebrow uppercase text-gold-deep;
+  }
+
+  .rule-line {
+    @apply border-t border-line;
+  }
+
+  /* Editorial panel: squared corners, hairline border, quiet shadow */
+  .panel {
+    @apply border border-line bg-ivory-raised shadow-panel;
+  }
+
+  .panel-sunk {
+    @apply border border-line bg-ivory-sunk;
+  }
+
+  .panel-dark {
+    @apply border border-forest-600/60 bg-forest-800 text-ivory;
+  }
+
+  /* Buttons — rectangular, deliberate, no pill */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 border px-5 py-2.5 font-sans text-sm
+      transition-colors duration-200 ease-editorial disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn border-ink bg-ink text-ivory hover:bg-forest-700;
+  }
+  .btn-ghost {
+    @apply btn border-ink/80 bg-transparent text-ink hover:bg-ivory-sunk;
+  }
+  .btn-gold {
+    @apply btn border-gold-deep bg-gold text-forest-900 hover:bg-gold-soft;
+  }
+  .btn-dark {
+    @apply btn border-ivory/30 bg-transparent text-ivory hover:bg-ivory/10;
+  }
+
+  /* Tag — small, squared, cartographic */
+  .tag {
+    @apply inline-flex items-center gap-1.5 border border-line bg-ivory px-2 py-0.5
+      font-sans text-[0.68rem] uppercase tracking-[0.12em] text-ink-muted;
+  }
+
+  .hairline-grid {
+    background-image:
+      linear-gradient(to right, rgba(20, 37, 29, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(20, 37, 29, 0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* ---- Game-screen helpers -------------------------------------------- */
+@keyframes mapdash {
+  to {
+    stroke-dashoffset: -16;
+  }
+}
+.map-target {
+  stroke-dasharray: 4 4;
+  animation: mapdash 0.9s linear infinite;
+}
+
+.game-vignette {
+  background:
+    radial-gradient(130% 100% at 50% 0%, transparent 55%, rgba(14, 27, 20, 0.55) 100%);
+}
+
+.hud-panel {
+  background: rgba(16, 28, 21, 0.92);
+  border: 1px solid rgba(184, 154, 96, 0.22);
+  box-shadow: 0 20px 48px -30px rgba(0, 0, 0, 0.8);
+}
+
+.hud-tick {
+  background-image: linear-gradient(90deg, rgba(184, 154, 96, 0.25) 1px, transparent 1px);
+  background-size: 8px 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
