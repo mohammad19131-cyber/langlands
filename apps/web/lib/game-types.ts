@@ -26,6 +26,7 @@ export type RoundInfo = {
   opensAt: string | null;
   closesAt: string | null;
   eventCode: EventCode | null;
+  serverNow: string;
 };
 
 export type Budget = {
@@ -52,6 +53,20 @@ export type LeaderRow = {
   isYou: boolean;
 };
 
+export type OwnPublishedRound = {
+  roundIndex: number;
+  snapshot: number;
+  final: number | null;
+  ecology: number;
+  reserve: number;
+  population: number;
+  air: number;
+  water_q: number;
+  soil: number;
+  bio: number;
+  pollution: number;
+};
+
 export type GameContext = {
   /** "live" = seated in a real competition. "preview" = inspect-only, no submit. */
   mode: "live" | "preview";
@@ -59,7 +74,7 @@ export type GameContext = {
   signedIn: boolean;
   email: string | null;
   isOrganiser: boolean;
-  team: { id: string; name: string; seat: number } | null;
+  team: { id: string; name: string; seat: number; loginId: string | null } | null;
   competition: { id: string; title: string; roundCount: number } | null;
   round: RoundInfo | null;
   /** The town state the player is deciding against (end of previous round). */
@@ -71,6 +86,7 @@ export type GameContext = {
   completedCodes: string[];
   submission: ExistingSubmission;
   leaderboard: LeaderRow[] | null;
+  ownHistory: OwnPublishedRound[];
   publishedRoundIndex: number | null;
   /** Honest status line, e.g. why the round is not submittable. */
   notice: string | null;

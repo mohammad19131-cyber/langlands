@@ -9,9 +9,20 @@ import { projectCost, sumAllocations } from "./game-logic";
 import { SECTOR_ACCENT } from "./ActionBar";
 
 export type SubmitState = {
-  status: "idle" | "submitting" | "success" | "error";
+  status: "idle" | "submitting" | "success" | "error" | "closed";
   message: string | null;
 };
+
+export function WaitOverlay({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-black/50 backdrop-blur-[1px]">
+      <div className="max-w-md border border-[#B89A60]/30 bg-[#0F1613]/95 px-6 py-5 text-center shadow-2xl">
+        <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#D9B15A]">{title}</p>
+        <p className="mt-2 text-[0.88rem] leading-6 text-[#E3DCC8]">{body}</p>
+      </div>
+    </div>
+  );
+}
 
 function Modal({
   title,
@@ -278,7 +289,9 @@ export function ReviewModal({
         {submit.message ? (
           <p
             className={`text-[0.8rem] ${
-              submit.status === "error" ? "text-[#C0533E]" : "text-[#9FC27E]"
+              submit.status === "error" || submit.status === "closed"
+                ? "text-[#C0533E]"
+                : "text-[#9FC27E]"
             }`}
           >
             {submit.message}
@@ -296,14 +309,20 @@ export function ReviewModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={submit.status === "submitting" || submit.status === "success"}
+            disabled={
+              submit.status === "submitting" ||
+              submit.status === "success" ||
+              submit.status === "closed"
+            }
             className="flex-1 border border-[#7BA157]/60 bg-[#2A4C39] px-3 py-2 text-[0.76rem] uppercase tracking-[0.06em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
           >
             {submit.status === "submitting"
-              ? "Submitting…"
+              ? "Saving…"
               : submit.status === "success"
-                ? "Submitted"
-                : "Confirm & submit"}
+                ? "Saved on server"
+                : submit.status === "closed"
+                  ? "Deadline passed"
+                  : "Confirm & save"}
           </button>
         </div>
       </div>

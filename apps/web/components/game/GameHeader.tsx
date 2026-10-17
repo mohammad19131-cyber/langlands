@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GameContext } from "../../lib/game-types";
+import { clockLabel, remainingMs } from "../../lib/clock";
 import { EVENT_LABELS } from "../../lib/format";
+import type { GameContext } from "../../lib/game-types";
 
 const EVENT_TONE: Record<string, string> = {
   HEATWAVE: "#C07A43",
@@ -11,21 +12,15 @@ const EVENT_TONE: Record<string, string> = {
   CONTAMINATION: "#C0533E",
 };
 
-function useCountdown(closesAt: string | null, status: string) {
+function useServerCountdown(closesAt: string | null, serverNow: string | null, status: string) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (status !== "open" || !closesAt) return;
+    if (status !== "open" || !closesAt || !serverNow) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [closesAt, status]);
-
-  if (!closesAt || status !== "open") return null;
-  const ms = new Date(closesAt).getTime() - now;
-  if (Number.isNaN(ms)) return null;
-  const clamped = Math.max(0, ms);
-  const m = Math.floor(clamped / 60000);
-  const s = Math.floor((clamped % 60000) / 1000);
-  return { label: `${m}:${s.toString().padStart(2, "0")}`, expired: ms <= 0 };
+  }, [closesAt, serverNow, status]);
+  if (status !== "open" || !serverNow) return null;
+  return remainingMs(closesAt, serverNow, now);
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: string }) {
@@ -41,42 +36,41 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
 
 export function GameHeader({
   ctx,
+  serverNow,
+  roundStatus,
+  saveLabel,
   onOpenStandings,
   onOpenScoring,
   onOpenEvent,
+  onOpenDesk,
 }: {
   ctx: GameContext;
+  serverNow: string;
+  roundStatus: string;
+  saveLabel: string;
   onOpenStandings: () => void;
   onOpenScoring: () => void;
   onOpenEvent: () => void;
+  onOpenDesk: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const i = ctx.town.indicators;
-  const ecology = (i.air + i.water_q + i.soil + i.bio + (100 - i.pollution)) / 5;
-  const welfare = (i.health + i.services + i.jobs) / 3;
-  const countdown = useCountdown(ctx.round?.closesAt ?? null, ctx.round?.status ?? "none");
+  const remaining = useServerCountdown(
+    ctx.round?.closesAt ?? null,
+    serverNow,
+    roundStatus,
+  );
   const eventCode = ctx.round?.eventCode ?? null;
   const roundNo = ctx.round?.index ?? 1;
   const roundCount = ctx.competition?.roundCount ?? 6;
-
-  const statusLabel =
-    ctx.round?.status === "open"
-      ? countdown
-        ? countdown.expired
-          ? "Closing"
-          : countdown.label
-        : "Open"
-      : ctx.round?.status === "scheduled"
-        ? "Opens soon"
-        : ctx.round?.status === "locked" || ctx.round?.status === "processing"
-          ? "Locked"
-          : ctx.round?.status === "published"
-            ? "Published"
-            : "Planning";
+  const statusLabel = clockLabel({
+    status: roundStatus,
+    opensAt: ctx.round?.opensAt ?? null,
+    remainingMs: remaining,
+  });
+  const expired = roundStatus === "open" && remaining != null && remaining <= 0;
 
   return (
     <header className="relative z-30 flex h-14 shrink-0 items-center gap-4 border-b border-[#B89A60]/20 bg-[#0E1512]/95 px-4 backdrop-blur">
-      {/* Brand + team */}
       <div className="flex items-center gap-3">
         <span className="grid h-7 w-7 place-items-center border border-[#B89A60]/50">
           <span className="h-3 w-3 bg-gradient-to-br from-[#B89A60] to-[#7A2E25]" />
@@ -86,12 +80,13 @@ export function GameHeader({
             Langlands R3
           </span>
           <span className="mt-0.5 text-[0.62rem] tracking-[0.1em] text-[#8A8674]">
-            {ctx.team ? `${ctx.team.name} · Seat ${ctx.team.seat}` : "Ashfen command"}
+            {ctx.team
+              ? `${ctx.team.loginId ? `Team ${ctx.team.loginId}` : ctx.team.name} · Seat ${ctx.team.seat}`
+              : "Ashfen command"}
           </span>
         </div>
       </div>
 
-      {/* Round + timer + event */}
       <div className="ml-1 flex items-center gap-3 border-l border-[#B89A60]/15 pl-4">
         <div className="flex flex-col leading-none">
           <span className="text-[0.58rem] uppercase tracking-[0.14em] text-[#8A8674]">Round</span>
@@ -101,14 +96,16 @@ export function GameHeader({
         </div>
         <div
           className={`flex items-center gap-1.5 border px-2 py-1 ${
-            countdown && !countdown.expired
+            roundStatus === "open" && !expired
               ? "border-[#7BA157]/40 text-[#9FC27E]"
-              : "border-[#B89A60]/25 text-[#C9C2AD]"
+              : expired
+                ? "border-[#C0533E]/40 text-[#C0533E]"
+                : "border-[#B89A60]/25 text-[#C9C2AD]"
           }`}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              ctx.round?.status === "open" ? "bg-[#7BA157] animate-pulse" : "bg-[#8A8674]"
+              roundStatus === "open" && !expired ? "bg-[#7BA157] animate-pulse" : "bg-[#8A8674]"
             }`}
           />
           <span className="font-mono text-[0.72rem] tabular-nums">{statusLabel}</span>
@@ -126,16 +123,36 @@ export function GameHeader({
         </button>
       </div>
 
-      {/* Metrics */}
-      <div className="ml-auto flex items-center gap-5">
-        <Stat label="Credits" value={`${Math.round(ctx.budget.available)}`} accent="#D9B15A" />
-        <Stat label="Population" value={ctx.town.population.toLocaleString()} />
-        <Stat label="Ecology" value={`${Math.round(ecology)}`} accent="#7BA157" />
-        <Stat label="Welfare" value={`${Math.round(welfare)}`} accent="#9FC27E" />
+      <div className="ml-auto hidden items-center gap-5 lg:flex">
+        <Stat label="Available" value={`${Math.round(ctx.budget.available)}`} accent="#D9B15A" />
+        <Stat label="Reserve" value={`${Math.round(ctx.budget.reserve)}`} />
+        <Stat label="Income" value={`${Math.round(ctx.budget.income)}`} />
+        <Stat label="Upkeep" value={`${Math.round(ctx.budget.maintenance)}`} />
       </div>
 
-      {/* Actions */}
       <div className="flex items-center gap-2 border-l border-[#B89A60]/15 pl-3">
+        <span className="hidden text-[0.62rem] uppercase tracking-[0.1em] text-[#8A8674] xl:inline">
+          {saveLabel}
+        </span>
+        <a
+          href="/play/decide"
+          className="border border-[#B89A60]/25 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#C9C2AD] transition-colors hover:bg-white/5"
+        >
+          Decide
+        </a>
+        <a
+          href="/play/history"
+          className="hidden border border-[#B89A60]/25 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#C9C2AD] transition-colors hover:bg-white/5 sm:inline"
+        >
+          History
+        </a>
+        <button
+          type="button"
+          onClick={onOpenDesk}
+          className="border border-[#B89A60]/25 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#C9C2AD] transition-colors hover:bg-white/5"
+        >
+          Desk
+        </button>
         <button
           type="button"
           onClick={onOpenScoring}
@@ -153,7 +170,7 @@ export function GameHeader({
         <div className="relative">
           <button
             type="button"
-            onClick={() => setMenuOpen((v) => !v)}
+            onClick={() => setMenuOpen((open) => !open)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             className="grid h-8 w-8 place-items-center border border-[#B89A60]/25 text-[0.72rem] font-semibold text-[#C9C2AD] transition-colors hover:bg-white/5"

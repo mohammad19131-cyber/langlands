@@ -1,6 +1,14 @@
-import { CATALOGUE, SECTORS, type Project, type Sector } from "@langlands/sim/public";
+import { CATALOGUE, type Project, type Sector } from "@langlands/sim/public";
 import { INDICATORS } from "../../lib/ashfen";
+import {
+  emptyAllocations,
+  fullAllocations,
+  projectCost,
+  sumAllocations,
+} from "../../lib/decision";
 import { EVENT_LABELS } from "../../lib/format";
+
+export { emptyAllocations, fullAllocations, projectCost, sumAllocations };
 
 /**
  * Browser-safe helpers mirroring the engine's eligibility rules for responsive
@@ -97,22 +105,3 @@ export function summariseEffects(project: Project): ProjectEffect[] {
   return out;
 }
 
-export function emptyAllocations(): Record<Sector, number> {
-  const out = {} as Record<Sector, number>;
-  for (const s of SECTORS) out[s] = 0;
-  return out;
-}
-
-export function fullAllocations(partial: Partial<Record<Sector, number>>): Record<Sector, number> {
-  const out = emptyAllocations();
-  for (const s of SECTORS) out[s] = Math.max(0, Math.round(partial[s] ?? 0));
-  return out;
-}
-
-export function sumAllocations(alloc: Record<Sector, number>): number {
-  return SECTORS.reduce((acc, s) => acc + (alloc[s] ?? 0), 0);
-}
-
-export function projectCost(starts: string[]): number {
-  return starts.reduce((acc, c) => acc + (CATALOGUE[c]?.cost ?? 0), 0);
-}

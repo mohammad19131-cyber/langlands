@@ -1,6 +1,6 @@
 "use client";
 
-import { CATALOGUE, SECTORS, type Project, type Sector } from "@langlands/sim/public";
+import { CATALOGUE, type Project, type Sector } from "@langlands/sim/public";
 import { SECTOR_LABELS } from "../../lib/format";
 import { CATEGORIES, type GameContext } from "../../lib/game-types";
 import {
@@ -154,141 +154,44 @@ function CataloguePopover({
   );
 }
 
-function BudgetPanel({
-  allocations,
-  remaining,
-  disabled,
-  onAllocate,
-  onSpread,
-  onClear,
-  onClose,
-}: {
-  allocations: Record<Sector, number>;
-  remaining: number;
-  disabled: boolean;
-  onAllocate: (sector: Sector, value: number) => void;
-  onSpread: () => void;
-  onClear: () => void;
-  onClose: () => void;
-}) {
-  const allocated = sumAllocations(allocations);
-  const left = remaining - allocated;
-  return (
-    <div className="pointer-events-auto absolute bottom-full right-0 mb-2 w-[24rem] border border-[#B89A60]/25 bg-[#0F1613]/97 shadow-2xl backdrop-blur">
-      <div className="flex items-center justify-between border-b border-[#B89A60]/15 px-3 py-2">
-        <p className="text-[0.74rem] uppercase tracking-[0.12em] text-[#E3DCC8]">Allocate budget</p>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close budget panel"
-          className="text-[#8A8674] transition-colors hover:text-[#E3DCC8]"
-        >
-          ✕
-        </button>
-      </div>
-      <div className="flex items-center justify-between border-b border-[#B89A60]/10 px-3 py-2 text-[0.72rem]">
-        <span className="text-[#8A8674]">
-          Spendable after projects: <span className="text-[#E3DCC8]">{Math.round(remaining)} cr</span>
-        </span>
-        <span className={left < -0.5 ? "text-[#C0533E]" : "text-[#9FC27E]"}>
-          {left < -0.5 ? `Over by ${Math.round(-left)}` : `${Math.round(left)} cr free`}
-        </span>
-      </div>
-      <div className="space-y-1.5 p-3">
-        {SECTORS.map((s) => {
-          const value = allocations[s] ?? 0;
-          const step = 20;
-          return (
-            <div key={s} className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 shrink-0" style={{ backgroundColor: SECTOR_ACCENT[s] }} />
-              <span className="w-28 shrink-0 text-[0.72rem] text-[#B7B19D]">{SECTOR_LABELS[s]}</span>
-              <button
-                type="button"
-                disabled={disabled || value <= 0}
-                onClick={() => onAllocate(s, Math.max(0, value - step))}
-                className="grid h-6 w-6 place-items-center border border-white/10 text-[#C9C2AD] transition-colors hover:bg-white/5 disabled:opacity-30"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min={0}
-                value={value}
-                disabled={disabled}
-                onChange={(e) => onAllocate(s, Math.max(0, Math.round(Number(e.target.value) || 0)))}
-                className="h-6 w-16 border border-white/10 bg-black/30 px-1.5 text-right text-[0.72rem] tabular-nums text-[#E3DCC8] focus:border-[#D9B15A] focus:outline-none"
-              />
-              <button
-                type="button"
-                disabled={disabled || left < step}
-                onClick={() => onAllocate(s, value + step)}
-                className="grid h-6 w-6 place-items-center border border-white/10 text-[#C9C2AD] transition-colors hover:bg-white/5 disabled:opacity-30"
-              >
-                +
-              </button>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-2 border-t border-[#B89A60]/10 p-3">
-        <button
-          type="button"
-          onClick={onSpread}
-          disabled={disabled || remaining <= 0}
-          className="flex-1 border border-[#B89A60]/30 px-2 py-1.5 text-[0.7rem] text-[#D7CFB8] transition-colors hover:bg-white/5 disabled:opacity-40"
-        >
-          Spread remaining evenly
-        </button>
-        <button
-          type="button"
-          onClick={onClear}
-          disabled={disabled || allocated <= 0}
-          className="border border-white/10 px-2 py-1.5 text-[0.7rem] text-[#C9C2AD] transition-colors hover:bg-white/5 disabled:opacity-40"
-        >
-          Clear
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function ActionBar({
   ctx,
   locked,
   canSubmit,
+  saving,
+  saveLabel,
+  dirty,
   openCategory,
   onToggleCategory,
   stagedStarts,
   onToggleStart,
   allocations,
-  onAllocate,
-  onSpread,
-  onClear,
-  budgetOpen,
   onToggleBudget,
+  onSave,
   onReview,
 }: {
   ctx: GameContext;
   locked: boolean;
   canSubmit: boolean;
+  saving: boolean;
+  saveLabel: string;
+  dirty: boolean;
   openCategory: Sector | null;
   onToggleCategory: (sector: Sector) => void;
   stagedStarts: string[];
   onToggleStart: (code: string) => void;
   allocations: Record<Sector, number>;
-  onAllocate: (sector: Sector, value: number) => void;
-  onSpread: () => void;
-  onClear: () => void;
-  budgetOpen: boolean;
   onToggleBudget: () => void;
+  onSave: () => void;
   onReview: () => void;
 }) {
   const cost = projectCost(stagedStarts);
   const remaining = ctx.budget.available - cost;
   const allocated = sumAllocations(allocations);
   const free = remaining - allocated;
-  const overBudget = cost > ctx.budget.available + 0.5 || free < -0.5;
-  const canReview = canSubmit && !overBudget;
+  const projectsOver = cost > ctx.budget.available + 0.5;
+  const overBudget = projectsOver || free < -0.5;
+  const canReview = canSubmit && !projectsOver;
 
   return (
     <div className="relative z-30 shrink-0 border-t border-[#B89A60]/20 bg-[#0E1512]/95 backdrop-blur">
@@ -369,39 +272,31 @@ export function ActionBar({
             </span>
           </div>
 
-          <div className="relative">
-            <button
-              type="button"
-              onClick={onToggleBudget}
-              className={`border px-3 py-2 text-[0.72rem] uppercase tracking-[0.08em] transition-colors ${
-                budgetOpen
-                  ? "border-[#D9B15A] bg-[#D9B15A]/10 text-[#F2ECDC]"
-                  : "border-[#B89A60]/30 text-[#D7CFB8] hover:bg-white/5"
-              }`}
-            >
-              Budget
-            </button>
-            {budgetOpen ? (
-              <BudgetPanel
-                allocations={allocations}
-                remaining={remaining}
-                disabled={locked}
-                onAllocate={onAllocate}
-                onSpread={onSpread}
-                onClear={onClear}
-                onClose={onToggleBudget}
-              />
-            ) : null}
-          </div>
+          <button
+            type="button"
+            onClick={onToggleBudget}
+            className="border border-[#B89A60]/30 px-3 py-2 text-[0.72rem] uppercase tracking-[0.08em] text-[#D7CFB8] transition-colors hover:bg-white/5"
+          >
+            Budget
+          </button>
 
           <button
             type="button"
+            onClick={onSave}
+            disabled={!canReview || saving || !dirty}
+            className="border border-[#B89A60]/40 px-3 py-2 text-[0.72rem] uppercase tracking-[0.08em] text-[#D7CFB8] transition-colors hover:bg-white/5 disabled:cursor-not-allowed disabled:text-[#5F5B4D]"
+          >
+            {saving ? "Saving…" : dirty ? "Save to server" : "Saved"}
+          </button>
+          <button
+            type="button"
             onClick={onReview}
-            disabled={!canReview}
+            disabled={!canReview || saving}
             className="border border-[#7BA157]/60 bg-[#2A4C39] px-4 py-2 text-[0.74rem] uppercase tracking-[0.08em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-[#5F5B4D]"
           >
-            Review &amp; submit
+            Review
           </button>
+          <span className="sr-only">{saveLabel}</span>
         </div>
       </div>
     </div>

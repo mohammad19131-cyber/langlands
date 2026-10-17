@@ -13,6 +13,7 @@ import type {
   EventCode,
   GameContext,
   LeaderRow,
+  OwnPublishedRound,
   RoundInfo,
   RoundPhase,
 } from "../game-types";
@@ -87,6 +88,7 @@ function previewContext(args: {
       opensAt: null,
       closesAt: null,
       eventCode: (PACK_A[1] as EventCode | null) ?? null,
+      serverNow: new Date().toISOString(),
     },
     town: townToView(town, "Ashfen · shared starting template", 0),
     budget: computeBudget(town, 1),
@@ -94,6 +96,7 @@ function previewContext(args: {
     completedCodes: [],
     submission: null,
     leaderboard: null,
+    ownHistory: [],
     publishedRoundIndex: null,
     notice: args.notice,
   };
@@ -108,7 +111,7 @@ type RoundRow = {
   event_code: EventCode | null;
 };
 
-function toRoundInfo(r: RoundRow): RoundInfo {
+function toRoundInfo(r: RoundRow, serverNow: string): RoundInfo {
   return {
     id: r.id,
     index: r.round_index,
@@ -116,6 +119,7 @@ function toRoundInfo(r: RoundRow): RoundInfo {
     opensAt: r.opens_at,
     closesAt: r.closes_at,
     eventCode: r.event_code ?? (PACK_A[r.round_index] as EventCode | null) ?? null,
+    serverNow,
   };
 }
 
@@ -346,6 +350,36 @@ export async function loadGameContext(): Promise<GameContext> {
     }
   }
 
+  const ownHistory: OwnPublishedRound[] = [];
+  if (publishedRounds.length) {
+    const publishedIds = publishedRounds.map((row) => row.id);
+    const { data: ownRows } = await admin
+      .from("published_results")
+      .select(
+        "round_index, snapshot_score, final_score, air, water_q, soil, bio, pollution, reserve, population",
+      )
+      .eq("team_id", team.id)
+      .in("round_id", publishedIds)
+      .order("round_index");
+    for (const row of (ownRows as Record<string, number | string | null>[] | null) ?? []) {
+      ownHistory.push({
+        roundIndex: Number(row.round_index),
+        snapshot: Number(row.snapshot_score),
+        final: row.final_score == null ? null : Number(row.final_score),
+        ecology: ecologyFromRow(row as Record<string, number>),
+        reserve: Number(row.reserve),
+        population: Number(row.population),
+        air: Number(row.air),
+        water_q: Number(row.water_q),
+        soil: Number(row.soil),
+        bio: Number(row.bio),
+        pollution: Number(row.pollution),
+      });
+    }
+  }
+
+  const serverNow = new Date().toISOString();
+
   return {
     mode: "live",
     configured,
@@ -357,15 +391,16 @@ export async function loadGameContext(): Promise<GameContext> {
       seat: team.seat,
     }),
     isOrganiser,
-    team: { id: team.id, name: team.name, seat: team.seat },
+    team: { id: team.id, name: team.name, seat: team.seat, loginId: team.login_id },
     competition,
-    round: activeRound ? toRoundInfo(activeRound) : null,
+    round: activeRound ? toRoundInfo(activeRound, serverNow) : null,
     town: townToView(town, townLabel, displayRound),
     budget,
     startedCodes: Object.keys(town.started ?? {}),
     completedCodes: Object.keys(town.completed ?? {}),
     submission,
     leaderboard,
+    ownHistory,
     publishedRoundIndex,
     notice,
   };
