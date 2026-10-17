@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getPublicSupabaseConfig } from "../../lib/env";
+import { userIsOrganiser } from "../../lib/server/authz";
 import { getSessionState } from "../../lib/session";
 import { SignInForm } from "./SignInForm";
 
@@ -13,7 +14,7 @@ export default async function SignInPage() {
   const config = getPublicSupabaseConfig();
   const session = await getSessionState();
   if (session.kind === "signed_in") {
-    redirect("/play");
+    redirect((await userIsOrganiser(session.userId)) ? "/room" : "/play");
   }
 
   return (
@@ -63,8 +64,8 @@ export default async function SignInPage() {
         </div>
 
         <p className="mt-6 text-center text-[0.68rem] leading-4 text-[#5F5B4D]">
-          Sign in with your Team ID and password. Scores, budgets and results are decided on the
-          server.
+          Teams sign in with Team ID and password. Organisers use their staff email. Scores, budgets
+          and results are decided on the server.
         </p>
       </div>
     </main>

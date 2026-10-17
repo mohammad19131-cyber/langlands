@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { parseQualifiedTeamId } from "../../lib/team-login";
+import { resolveLoginIdentifier } from "../../lib/organiser-login";
 
 export function SignInForm() {
   const router = useRouter();
@@ -16,9 +16,9 @@ export function SignInForm() {
     setPending(true);
     setError(null);
 
-    const loginId = parseQualifiedTeamId(teamId);
-    if (!loginId) {
-      setError("Enter your Team ID (digits only, e.g. 004).");
+    const identifier = resolveLoginIdentifier(teamId);
+    if (identifier.kind === "invalid") {
+      setError("Enter your Team ID (digits only, e.g. 004) or organiser email.");
       setPending(false);
       return;
     }
@@ -27,7 +27,11 @@ export function SignInForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ teamId: loginId, password }),
+      body: JSON.stringify(
+        identifier.kind === "team"
+          ? { teamId: identifier.teamId, password }
+          : { email: identifier.email, password },
+      ),
     });
 
     if (!response.ok) {
@@ -37,7 +41,8 @@ export function SignInForm() {
       return;
     }
 
-    router.push("/play");
+    const data = (await response.json().catch(() => null)) as { next?: string } | null;
+    router.push(data?.next === "/room" ? "/room" : "/play");
     router.refresh();
   }
 
@@ -47,13 +52,12 @@ export function SignInForm() {
         className="block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
         htmlFor="team-id"
       >
-        Team ID
+        Team ID or organiser email
       </label>
       <input
         id="team-id"
         name="team-id"
         type="text"
-        inputMode="numeric"
         required
         autoComplete="username"
         autoCapitalize="none"
@@ -61,7 +65,7 @@ export function SignInForm() {
         value={teamId}
         onChange={(event) => setTeamId(event.target.value)}
         className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
-        placeholder="004"
+        placeholder="004 or organiser email"
       />
 
       <label

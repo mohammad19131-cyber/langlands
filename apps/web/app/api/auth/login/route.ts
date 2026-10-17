@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getPublicSupabaseConfig, hasServiceRole } from "../../../../lib/env";
 import { createServiceRoleClient } from "../../../../lib/supabase/admin";
-import { parseQualifiedTeamId } from "../../../../lib/team-login";
+import { resolveLoginIdentifier } from "../../../../lib/organiser-login";
 import {
   systemAuthEmail,
   verifyTeamPassword,
@@ -39,14 +39,24 @@ export async function POST(request: Request) {
   }
 
   const payload = body as Record<string, unknown>;
-  const loginId = parseQualifiedTeamId(
-    typeof payload.teamId === "string" ? payload.teamId : "",
-  );
   const password = typeof payload.password === "string" ? payload.password : "";
+  const identifier = resolveLoginIdentifier(
+    typeof payload.teamId === "string" && payload.teamId.trim()
+      ? payload.teamId
+      : typeof payload.email === "string"
+        ? payload.email
+        : "",
+  );
 
-  if (!loginId || !password) {
+  if (!password || identifier.kind === "invalid") {
     return NextResponse.json({ error: "Team ID or password is incorrect." }, { status: 401 });
   }
+
+  if (identifier.kind === "organiser") {
+    return signInOrganiser(publicConfig.url, publicConfig.anonKey, identifier.email, password);
+  }
+
+  const loginId = identifier.teamId;
 
   const admin = createServiceRoleClient();
   const { data: team, error: teamError } = await admin
@@ -112,5 +122,49 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     teamId: loginId,
+    next: "/play",
+  });
+}
+
+async function signInOrganiser(
+  url: string,
+  anonKey: string,
+  email: string,
+  password: string,
+) {
+  const admin = createServiceRoleClient();
+  const cookieStore = await cookies();
+  const supabase = createServerClient(url, anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet: CookieToSet[]) {
+        cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+      },
+    },
+  });
+
+  const { data, error: signError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signError || !data.user) {
+    return NextResponse.json({ error: "Team ID or password is incorrect." }, { status: 401 });
+  }
+
+  const { data: staff } = await admin
+    .from("competition_staff")
+    .select("staff_role")
+    .eq("user_id", data.user.id)
+    .eq("staff_role", "organiser")
+    .limit(1)
+    .maybeSingle();
+
+  if ((staff as { staff_role?: string } | null)?.staff_role !== "organiser") {
+    await supabase.auth.signOut();
+    return NextResponse.json({ error: "Team ID or password is incorrect." }, { status: 401 });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    next: "/room",
   });
 }

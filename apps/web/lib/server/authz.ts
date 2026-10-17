@@ -49,6 +49,18 @@ export async function requireOrganiser(
   return data?.staff_role === "organiser";
 }
 
+export async function userIsOrganiser(userId: string): Promise<boolean> {
+  const admin = createServiceRoleClient();
+  const { data } = await admin
+    .from("competition_staff")
+    .select("staff_role")
+    .eq("user_id", userId)
+    .eq("staff_role", "organiser")
+    .limit(1)
+    .maybeSingle();
+  return data?.staff_role === "organiser";
+}
+
 export async function requireTeamMember(userId: string, teamId: string): Promise<boolean> {
   const admin = createServiceRoleClient();
   const { data } = await admin

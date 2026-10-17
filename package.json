@@ -14,7 +14,8 @@
     "test:sim": "npm test -w @langlands/sim",
     "test:db": "vitest run --config supabase/tests/vitest.config.ts",
     "test:web": "vitest run --config apps/web/vitest.config.ts",
-    "seed:sql": "packages/sim/node_modules/.bin/vite-node --config packages/sim/vitest.config.ts supabase/scripts/generate-seed.ts"
+    "seed:sql": "packages/sim/node_modules/.bin/vite-node --config packages/sim/vitest.config.ts supabase/scripts/generate-seed.ts",
+    "organiser:local": "node_modules/.bin/vite-node --config packages/sim/vitest.config.ts apps/web/scripts/provision-local-organiser.ts"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.11",

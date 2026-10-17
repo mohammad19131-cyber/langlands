@@ -9,7 +9,7 @@ import {
 import { parseTown, townBadges } from "@langlands/round-machine";
 import type { IndicatorKey, TownView } from "../ashfen";
 import type { Budget, EventCode, GameContext, RoundInfo, RoundPhase } from "../game-types";
-import { publicPlayerLabel } from "../display-identity";
+import { isSystemAuthEmail, publicPlayerLabel } from "../display-identity";
 import { getPublicSupabaseConfig, hasServiceRole } from "../env";
 import { createServerSupabase } from "../supabase/server";
 import { createServiceRoleClient } from "../supabase/admin";
@@ -70,6 +70,7 @@ function previewContext(args: {
   signedIn: boolean;
   email: string | null;
   notice: string;
+  isOrganiser?: boolean;
 }): GameContext {
   const town = createInitialTown();
   return {
@@ -77,7 +78,7 @@ function previewContext(args: {
     configured: args.configured,
     signedIn: args.signedIn,
     email: args.email,
-    isOrganiser: false,
+    isOrganiser: Boolean(args.isOrganiser),
     team: null,
     competition: null,
     round: {
@@ -185,12 +186,22 @@ export async function loadGameContext(): Promise<GameContext> {
   const team = Array.isArray(teamRaw) ? teamRaw[0] : teamRaw;
 
   if (!team) {
+    const { data: staffRow } = await admin
+      .from("competition_staff")
+      .select("staff_role")
+      .eq("user_id", user.id)
+      .eq("staff_role", "organiser")
+      .limit(1)
+      .maybeSingle();
+    const isOrganiser = (staffRow as { staff_role?: string } | null)?.staff_role === "organiser";
     return previewContext({
       configured,
       signedIn: true,
-      email: null,
-      notice:
-        "Your account is signed in but not seated on a team yet. Ask the organiser to add you to a team, then reload.",
+      email: isSystemAuthEmail(user.email) ? null : (user.email ?? null),
+      isOrganiser,
+      notice: isOrganiser
+        ? "Organiser accounts are not seated on a team. Open the control room to run the competition."
+        : "Your account is signed in but not seated on a team yet. Ask the organiser to add you to a team, then reload.",
     });
   }
 
