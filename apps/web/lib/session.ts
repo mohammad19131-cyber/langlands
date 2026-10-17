@@ -1,3 +1,4 @@
+import { isSystemAuthEmail } from "./display-identity";
 import { createServerSupabase } from "./supabase/server";
 import { getPublicSupabaseConfig } from "./env";
 
@@ -13,9 +14,11 @@ export async function getSessionState(): Promise<SessionState> {
   if (!supabase) return { kind: "not_configured" };
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return { kind: "anonymous" };
+  const rawEmail = data.user.email ?? null;
   return {
     kind: "signed_in",
-    email: data.user.email ?? null,
+    // Strip opaque Auth identities from any session surface.
+    email: isSystemAuthEmail(rawEmail) ? null : rawEmail,
     userId: data.user.id,
   };
 }

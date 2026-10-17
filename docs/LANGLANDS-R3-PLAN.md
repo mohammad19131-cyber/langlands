@@ -554,7 +554,7 @@ T0: live. No engine change on the day.
 6. **Can projects be cancelled?** Recommendation: no cancel after lock; abandoned builds still pay remaining build delay with no effect.
 7. **Spectator mode** for a hall screen.
 8. **Presentation / narrative prize** beside the numeric score.
-9. **Auth provider:** frozen as Team ID (`01`–`20`) + password. No Google or magic-link UI.
+9. **Auth provider:** frozen as qualified Team ID + password (bcrypt). No Google, magic-link, or participant email UI.
 10. **Whether round 1 grant stays 180 credits.**
 11. **Brand, town name, and whether “Ashfen” is acceptable.**
 12. **Reopen policy** if a lab laptop farm loses Wi‑Fi for five minutes.

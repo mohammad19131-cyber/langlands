@@ -39,14 +39,27 @@ export async function POST(
     return jsonError(400, "invalid", "JSON object required");
   }
   const payload = body as Record<string, unknown>;
-  const teamId = typeof payload.teamId === "string" ? payload.teamId : "";
-  if (!teamId) return jsonError(400, "invalid", "teamId required");
+
+  // Authorization comes from the session membership, never from a client Team ID.
+  const admin = createServiceRoleClient();
+  const { data: membership } = await admin
+    .from("team_members")
+    .select("team_id")
+    .eq("user_id", authed.user.userId)
+    .limit(1)
+    .maybeSingle();
+  if (!membership?.team_id) return jsonError(403, "unauthorized");
+  const teamId = membership.team_id as string;
+
+  const claimedTeamId = typeof payload.teamId === "string" ? payload.teamId : "";
+  if (claimedTeamId && claimedTeamId !== teamId) {
+    return jsonError(403, "unauthorized");
+  }
   if (!(await requireTeamMember(authed.user.userId, teamId))) {
     return jsonError(403, "unauthorized");
   }
   const { teamId: _teamId, ...proposalSource } = payload;
 
-  const admin = createServiceRoleClient();
   const { data: round, error: roundError } = await admin
     .from("rounds")
     .select("id, competition_id, round_index, status, opens_at, closes_at")
@@ -56,10 +69,10 @@ export async function POST(
 
   const { data: team } = await admin
     .from("teams")
-    .select("id, competition_id")
+    .select("id, competition_id, disqualified")
     .eq("id", teamId)
     .maybeSingle();
-  if (!team || team.competition_id !== round.competition_id) {
+  if (!team || team.competition_id !== round.competition_id || team.disqualified) {
     return jsonError(403, "unauthorized");
   }
 

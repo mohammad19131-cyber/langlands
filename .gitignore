@@ -12,3 +12,6 @@ dist/
 
 __pycache__/
 *.py[cod]
+.vercel
+.env.local
+.env*.local

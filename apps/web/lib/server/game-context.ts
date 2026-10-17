@@ -16,6 +16,7 @@ import type {
   RoundInfo,
   RoundPhase,
 } from "../game-types";
+import { publicPlayerLabel } from "../display-identity";
 import { getPublicSupabaseConfig, hasServiceRole } from "../env";
 import { createServerSupabase } from "../supabase/server";
 import { createServiceRoleClient } from "../supabase/admin";
@@ -163,14 +164,28 @@ export async function loadGameContext(): Promise<GameContext> {
 
   const { data: membership } = await admin
     .from("team_members")
-    .select("team_id, teams(id, name, seat, competition_id)")
+    .select("team_id, teams(id, name, seat, competition_id, login_id, disqualified)")
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
 
   const teamRaw = (membership as { teams?: unknown } | null)?.teams as
-    | { id: string; name: string; seat: number; competition_id: string }
-    | { id: string; name: string; seat: number; competition_id: string }[]
+    | {
+        id: string;
+        name: string;
+        seat: number;
+        competition_id: string;
+        login_id: string | null;
+        disqualified: boolean;
+      }
+    | {
+        id: string;
+        name: string;
+        seat: number;
+        competition_id: string;
+        login_id: string | null;
+        disqualified: boolean;
+      }[]
     | undefined;
   const team = Array.isArray(teamRaw) ? teamRaw[0] : teamRaw;
 
@@ -178,9 +193,18 @@ export async function loadGameContext(): Promise<GameContext> {
     return previewContext({
       configured,
       signedIn: true,
-      email: user.email ?? null,
+      email: null,
       notice:
         "Your account is signed in but not seated on a team yet. Ask the organiser to add you to a team, then reload.",
+    });
+  }
+
+  if (team.disqualified) {
+    return previewContext({
+      configured,
+      signedIn: true,
+      email: null,
+      notice: "This team has been disqualified and cannot take further decisions.",
     });
   }
 
@@ -326,7 +350,12 @@ export async function loadGameContext(): Promise<GameContext> {
     mode: "live",
     configured,
     signedIn: true,
-    email: user.email ?? null,
+    // Never expose Auth system emails to the client; show Team ID / seat label.
+    email: publicPlayerLabel({
+      loginId: team.login_id,
+      teamName: team.name,
+      seat: team.seat,
+    }),
     isOrganiser,
     team: { id: team.id, name: team.name, seat: team.seat },
     competition,

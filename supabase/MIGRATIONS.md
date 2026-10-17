@@ -10,6 +10,8 @@ Forward-only. Do not edit applied files in place.
 | `0004_phase2_hardening.sql` | Six-round freeze, `published_results`, tighter RLS/GRANTs, FORCE RLS, submission sanitise |
 | `0005_seed_event.sql` | Idempotent `seed_langlands_r3()` + first run |
 | `0006_round_machine.sql` | Lock manifest, process claim, submit/open/lock/process/publish/void/audit RPCs |
+| `0007_team_credentials.sql` | `teams.login_id` + `teams.password_hash` (bcrypt); hash column revoked from anon/authenticated |
+| `0008_reject_disqualified_submit.sql` | `submit_decision` rejects `teams.disqualified` |
 
 Apply in that order. Regenerate 0005 only via `npm run seed:sql` so catalogue rows stay aligned with `packages/sim`. Do not edit 0001–0006 in place.
 

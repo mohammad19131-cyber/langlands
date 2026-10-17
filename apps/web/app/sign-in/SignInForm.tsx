@@ -2,8 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { createBrowserSupabase } from "../../lib/supabase/client";
-import { parseTeamLoginId, teamLoginEmail } from "../../lib/team-login";
+import { parseQualifiedTeamId } from "../../lib/team-login";
 
 export function SignInForm() {
   const router = useRouter();
@@ -17,26 +16,23 @@ export function SignInForm() {
     setPending(true);
     setError(null);
 
-    const seat = parseTeamLoginId(teamId);
-    if (seat === null) {
-      setError("Enter a Team ID from 01 to 20.");
+    const loginId = parseQualifiedTeamId(teamId);
+    if (!loginId) {
+      setError("Enter your Team ID (digits only, e.g. 004).");
       setPending(false);
       return;
     }
 
-    const supabase = createBrowserSupabase();
-    if (!supabase) {
-      setError("The competition backend is not configured in this browser build.");
-      setPending(false);
-      return;
-    }
-
-    const { error: signError } = await supabase.auth.signInWithPassword({
-      email: teamLoginEmail(seat),
-      password,
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ teamId: loginId, password }),
     });
-    if (signError) {
-      setError("Team ID or password is incorrect.");
+
+    if (!response.ok) {
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(data?.error ?? "Team ID or password is incorrect.");
       setPending(false);
       return;
     }
@@ -65,7 +61,7 @@ export function SignInForm() {
         value={teamId}
         onChange={(event) => setTeamId(event.target.value)}
         className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
-        placeholder="01"
+        placeholder="004"
       />
 
       <label

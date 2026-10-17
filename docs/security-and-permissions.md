@@ -81,8 +81,14 @@ Next.js still checks session and team on every action so error messages are clea
 
 ## Auth recommendation (frozen unless ops objects)
 
-Team ID (seat `01`–`20`) **and password**. No Google, no magic-link email in the player UI. No public sign-up. No 21st team. Auth users are `seat-NN@teams.langlands.app`, linked to seats via `team_members`.
+Qualified **Team ID** (e.g. `004`) **and password**. No Google, no magic-link, no participant email field, no public sign-up. No 21st team.
+
+- `teams.login_id` is the public username; `teams.id` stays the internal UUID.
+- Only bcrypt hashes are stored in `teams.password_hash` (column revoked from anon/authenticated).
+- Night-before provisioning (`POST /api/admin/provision-teams` with `TEAM_PROVISION_SECRET` or an organiser session) assigns the 20 qualified IDs to seats 1–20 in list order, generates unique passwords, and returns a one-time CSV for distribution.
+- Login verifies the hash server-side, then establishes a Supabase Auth session so `auth.uid()`, RLS, and `submit_decision` remain unchanged. Opaque Auth identities are never shown in the player UI.
+- Gameplay APIs authorize from session `team_members`, never from a client-supplied Team ID.
 
 ## Secrets
 
-Service role key: server env only, never `NEXT_PUBLIC_*`. Anon key is fine in the browser with RLS on.
+Service role key: server env only, never `NEXT_PUBLIC_*`. Anon key is fine in the browser with RLS on. `TEAM_PROVISION_SECRET` is server only.

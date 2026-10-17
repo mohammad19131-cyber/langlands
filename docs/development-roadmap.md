@@ -10,7 +10,7 @@ Status: canonical sequence. Planning, frozen engine (`py-ref-1.1.0`), website sk
 | Decision window | 18 minutes |
 | Events public? | Yes, full pack A formulas |
 | Team join | Organiser-seeded captains, 2–5 members |
-| Auth | Team ID + password (`seat-NN@teams.langlands.app`). No Google, no magic-link UI. |
+| Auth | Qualified Team ID + password (bcrypt on `teams`). No Google, no magic-link, no participant email UI. |
 | Catalogue | 15 interventions, max 2 starts per round |
 | Map | SVG isometric, not WebGL |
 | Score override | Never |
@@ -41,7 +41,7 @@ Exit: `tsc --noEmit` clean; `/rules` matches the spec; sign-in works **once** en
 Remaining blockers (manual):
 
 1. Create the Supabase project and fill `apps/web/.env.local` (names in `.env.example`).
-2. Enable Email **password** sign-in; disable public sign-up and Google. Provision 20 users `seat-01@teams.langlands.app` … `seat-20@…` and attach each as captain of that seat.
+2. Enable Email **password** sign-in (used only as the Auth session backend); disable public sign-up and Google. Apply `0007`. Set `TEAM_PROVISION_SECRET`. Night before: POST the 20 qualified Team IDs to `/api/admin/provision-teams` and download the one-time credential CSV.
 3. Apply `0001`–`0006` in the SQL editor (Phase 2 seed is in `0005`; round machine is `0006`).
 4. Put `SUPABASE_SERVICE_ROLE_KEY` only on the server.
 

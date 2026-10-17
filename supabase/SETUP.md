@@ -29,9 +29,11 @@ Project ref `npwgkqfljrqhvuiateqk`. CLI `supabase db push` applied `0001`–`000
 
 ### 2. Auth (Team ID + password)
 
-Authentication → Providers: **Email** with password sign-in. Disable Google. **Disable** “Allow new users to sign up”.
+Authentication → Providers: **Email** with password sign-in (session backend only). Disable Google. **Disable** “Allow new users to sign up”.
 
-Player UI is Team ID (`01`–`20`) and password. The app maps seat *N* to `seat-NN@teams.langlands.app` (for example seat 3 → `seat-03@teams.langlands.app`). Provision those 20 Auth users with passwords you choose, then attach each as captain of the matching seat.
+Player UI is qualified **Team ID** (e.g. `004`) and password. Apply migration `0007`. Set `TEAM_PROVISION_SECRET` in `apps/web/.env.local`.
+
+Night before the event, POST the final list of exactly 20 Team IDs to `/api/admin/provision-teams` (Bearer secret or organiser session). Download the one-time CSV and distribute credentials. Do not commit or log the CSV.
 
 URL Configuration: Site URL + `http://localhost:3000/auth/callback` and the production callback.
 
@@ -68,6 +70,8 @@ supabase/migrations/0003_profile_on_signup.sql
 supabase/migrations/0004_phase2_hardening.sql
 supabase/migrations/0005_seed_event.sql
 supabase/migrations/0006_round_machine.sql
+supabase/migrations/0007_team_credentials.sql
+supabase/migrations/0008_reject_disqualified_submit.sql
 ```
 
 CLI (after `npm i -g supabase` and `supabase login` / `supabase link --project-ref <ref>`):
@@ -95,12 +99,13 @@ Not automated here (no Docker on the Phase 2 builder). After `db push`, a hosted
 
 ### 6. Vercel
 
-Set the same three names on Production and Preview. Do not add a `NEXT_PUBLIC_` copy of the secret.
+Set these on Production and Preview. Never prefix secrets with `NEXT_PUBLIC_`.
 
 | Vercel name | Dashboard source |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Secret key |
+| `TEAM_PROVISION_SECRET` | High-entropy secret you generate (server only; night-before provisioning) |
 
 Authentication → URL Configuration: Site URL = the Vercel origin. Redirect URLs must include `http://localhost:3000/auth/callback` and `https://<vercel-domain>/auth/callback`.
