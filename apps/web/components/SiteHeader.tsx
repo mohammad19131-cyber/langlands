@@ -6,7 +6,6 @@ import { ENGINE_VERSION } from "@langlands/sim/public";
 import type { SessionState } from "../lib/session";
 
 const NAV = [
-  { href: "/", label: "Briefing" },
   { href: "/rules", label: "Field guide" },
   { href: "/play", label: "Play" },
   { href: "/board", label: "Board" },
@@ -28,7 +27,7 @@ export function SiteHeader({
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-ivory-raised/95">
       <div className="mx-auto flex max-w-shell items-center justify-between gap-6 px-6 py-3.5 md:px-10">
-        <Link href="/" className="group flex items-baseline gap-2.5">
+        <Link href="/sign-in" className="group flex items-baseline gap-2.5">
           <span className="inline-block h-4 w-4 translate-y-0.5 border border-ink" aria-hidden>
             <span className="block h-full w-full origin-center scale-50 bg-gold" />
           </span>

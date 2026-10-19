@@ -3,26 +3,27 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
   --grain:
     repeating-linear-gradient(
       0deg,
-      rgba(20, 37, 29, 0.014) 0px,
-      rgba(20, 37, 29, 0.014) 1px,
+      rgba(231, 227, 214, 0.018) 0px,
+      rgba(231, 227, 214, 0.018) 1px,
       transparent 1px,
       transparent 3px
     );
 }
 
 html {
-  background: #f4f2eb;
+  background: #0b0f0d;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
 body {
   min-height: 100vh;
-  color: #14251d;
+  color: #e7e3d6;
+  background-color: #0b0f0d;
   background-image: var(--grain);
   background-attachment: fixed;
 }
@@ -40,8 +41,8 @@ h3 {
 }
 
 ::selection {
-  background: rgba(184, 154, 96, 0.3);
-  color: #14251d;
+  background: rgba(184, 154, 96, 0.35);
+  color: #f2ecdc;
 }
 
 a:focus-visible,

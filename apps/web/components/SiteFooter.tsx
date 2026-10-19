@@ -28,7 +28,7 @@ export function SiteFooter() {
         <nav className="font-sans text-sm">
           <p className="text-[0.68rem] uppercase tracking-[0.2em] text-gold-soft">Navigate</p>
           <ul className="mt-4 space-y-2.5 text-ivory/80">
-            <li><Link href="/" className="hover:text-ivory">Briefing</Link></li>
+            <li><Link href="/sign-in" className="hover:text-ivory">Sign in</Link></li>
             <li><Link href="/rules" className="hover:text-ivory">Field guide</Link></li>
             <li><Link href="/play" className="hover:text-ivory">Decision desk</Link></li>
             <li><Link href="/board" className="hover:text-ivory">Results board</Link></li>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { resolveLoginIdentifier } from "../../lib/organiser-login";
 
 export function SignInForm() {
   const router = useRouter();
+  const errorId = useId();
   const [teamId, setTeamId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -46,10 +47,14 @@ export function SignInForm() {
     router.refresh();
   }
 
+  const invalid = Boolean(error);
+  const fieldClass =
+    "w-full border bg-black/30 px-3 py-2.5 text-sm text-parchment-paper placeholder-mist-dim focus:border-gold-soft";
+
   return (
-    <form onSubmit={signIn} className="space-y-2.5">
+    <form id="sign-in" onSubmit={signIn} className="scroll-mt-24 space-y-2.5">
       <label
-        className="block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
+        className="block text-[0.62rem] uppercase tracking-[0.16em] text-mist"
         htmlFor="team-id"
       >
         Team ID or organiser email
@@ -64,12 +69,14 @@ export function SignInForm() {
         spellCheck={false}
         value={teamId}
         onChange={(event) => setTeamId(event.target.value)}
-        className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
+        className={`${fieldClass} ${invalid ? "border-state-danger" : "border-gold/30"}`}
         placeholder="004 or organiser email"
       />
 
       <label
-        className="mt-3 block text-[0.62rem] uppercase tracking-[0.16em] text-[#8A8674]"
+        className="mt-3 block text-[0.62rem] uppercase tracking-[0.16em] text-mist"
         htmlFor="password"
       >
         Password
@@ -82,18 +89,24 @@ export function SignInForm() {
         autoComplete="current-password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
-        className="w-full border border-[#B89A60]/30 bg-black/30 px-3 py-2.5 text-sm text-[#EDE8D9] placeholder-[#6F6B5B] focus:border-[#D9B15A] focus:outline-none"
+        aria-invalid={invalid || undefined}
+        aria-describedby={invalid ? errorId : undefined}
+        className={`${fieldClass} ${invalid ? "border-state-danger" : "border-gold/30"}`}
       />
 
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 w-full border border-[#7BA157]/60 bg-[#2A4C39] px-4 py-2.5 text-sm uppercase tracking-[0.08em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
+        className="mt-2 w-full border border-[#7BA157]/60 bg-forest-600 px-4 py-2.5 text-sm uppercase tracking-[0.08em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
       >
         {pending ? "Signing in…" : "Sign in"}
       </button>
 
-      {error ? <p className="text-sm text-[#C0533E]">{error}</p> : null}
+      {error ? (
+        <p id={errorId} role="alert" className="text-sm text-state-danger">
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

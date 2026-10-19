@@ -20,12 +20,17 @@ const config: Config = {
         line: { DEFAULT: "#DBD3BF", strong: "#C3B890" },
         // Dark surfaces (hero, map frame, footer)
         forest: {
+          950: "#0B0F0D",
           900: "#0E1B14",
+          850: "#0F1613",
           800: "#14251D",
           700: "#1E3728",
           600: "#2A4C39",
           500: "#3A6049",
         },
+        // Public-entry copy on dark forest (matches the live game canvas).
+        mist: { DEFAULT: "#9A947F", bright: "#C9C2AD", dim: "#8A8674" },
+        parchment: { DEFAULT: "#E7E3D6", paper: "#F2ECDC" },
         // Environmental state — muted, cartographic
         state: {
           restore: "#5E7A48",
