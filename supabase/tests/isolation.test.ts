@@ -407,6 +407,34 @@ describe("Phase 2 isolation (PGlite + stub auth)", () => {
     expect(orgView.rows[0].n).toBeGreaterThanOrEqual(2);
   });
 
+  it("participants cannot read private lock allocations", async () => {
+    await openRound(db, round1);
+    await db.query(`select public.lock_round($1::uuid, $2::uuid)`, [round1, USER_ORG]);
+    await asUser(db, USER_A, async () => {
+      await expect(db.query("select payload from public.round_lock_private")).rejects.toThrow();
+      await expect(db.query("select public.lock_round($1::uuid, $2::uuid)", [round1, USER_A])).rejects.toThrow();
+      await expect(db.query("select public.lock_round($1::uuid, $2::uuid)", [round1, USER_ORG])).rejects.toThrow();
+      const publicCols = await db.query<{ lock_manifest: unknown }>(
+        `select lock_manifest from public.rounds where id = '${round1}'`,
+      );
+      const blob = JSON.stringify(publicCols.rows[0]?.lock_manifest ?? {});
+      expect(blob).not.toMatch(/allocations/i);
+      expect(blob).not.toMatch(/projectStarts/i);
+      expect(blob).not.toMatch(/teamId/i);
+      expect(blob).toMatch(/"seat"/);
+      const star = await db.query<Record<string, unknown>>(
+        `select * from public.rounds where id = '${round1}'`,
+      );
+      expect(JSON.stringify(star.rows[0] ?? {})).not.toMatch(/allocations/i);
+    });
+    const privateRow = await db.query<{ payload: unknown }>(
+      `select payload from public.round_lock_private where round_id = '${round1}'`,
+    );
+    const privateBlob = JSON.stringify(privateRow.rows[0]?.payload ?? {});
+    expect(privateBlob).toMatch(/teamId/);
+    expect(privateBlob).toMatch(/allocations/);
+  });
+
   it("rewound client clocks cannot insert after closes_at", async () => {
     await supersedeAccepted(db, teamA);
     await db.exec(

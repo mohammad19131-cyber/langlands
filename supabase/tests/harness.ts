@@ -65,6 +65,10 @@ function migrationFiles(): string[] {
     "0006_round_machine.sql",
     "0007_team_credentials.sql",
     "0008_reject_disqualified_submit.sql",
+    "0009_lock_manifest_privilege.sql",
+    "0010_round_windows.sql",
+    "0011_restore_voided_round.sql",
+    "0012_teams_hash_column_grants.sql",
   ].map((name) => resolve(repoRoot, "supabase/migrations", name));
 }
 

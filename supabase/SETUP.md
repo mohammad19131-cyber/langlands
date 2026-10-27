@@ -72,6 +72,10 @@ supabase/migrations/0005_seed_event.sql
 supabase/migrations/0006_round_machine.sql
 supabase/migrations/0007_team_credentials.sql
 supabase/migrations/0008_reject_disqualified_submit.sql
+supabase/migrations/0009_lock_manifest_privilege.sql
+supabase/migrations/0010_round_windows.sql
+supabase/migrations/0011_restore_voided_round.sql
+supabase/migrations/0012_teams_hash_column_grants.sql
 ```
 
 CLI (after `npm i -g supabase` and `supabase login` / `supabase link --project-ref <ref>`):

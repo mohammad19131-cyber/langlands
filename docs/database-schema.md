@@ -71,3 +71,5 @@ Summary: teams read own submissions and own `town_states`; rivals never read `to
 ## Migrations
 
 Forward-only. Catalogue freeze is a data migration with hash stored on `competitions`. Never edit published `town_states` in place; void the round instead (`deployment-and-event-runbook.md`).
+
+`0009` stores full lock captures in `round_lock_private` (no browser GRANT) and keeps a public seat summary on `rounds.lock_manifest`. It also copies any pre-0009 full JSON into the private table and strips the public column. `0010` stamps an 18-minute window on `open_round`, adds `set_round_window` (organiser, while `open`), and `reopen_round` (unpublished `locked` only, before `town_states`). `0011` lets an organiser restore an unpublished `void` round to `scheduled` so the same round index can be opened again. Void does not count as published and does not skip Pack A. `0012` replaces table-level `GRANT SELECT` on `teams` with column grants so `authenticated` cannot read `password_hash`.

@@ -10,6 +10,7 @@ import {
   processRound,
   publicHasPrivateKeys,
   publishWithRecompute,
+  restoreVoidedRound,
   submitDecision,
   supportRead,
   voidRound,
@@ -287,9 +288,9 @@ describe("Phase 3 round machine (PGlite, local — not hosted Supabase)", () => 
     await openRound(exec, round2, USER_ORG);
     await lockRound(exec, round2, USER_ORG);
     await db.exec(
-      `update public.rounds
-          set lock_manifest = lock_manifest - (jsonb_array_length(lock_manifest) - 1)
-        where id = '${round2}'`,
+      `update public.round_lock_private
+          set payload = payload - (jsonb_array_length(payload) - 1)
+        where round_id = '${round2}'`,
     );
     const token = randomUUID();
     await expect(
@@ -303,9 +304,10 @@ describe("Phase 3 round machine (PGlite, local — not hosted Supabase)", () => 
       `select count(*)::int as n from public.town_states where round_id = '${round2}'`,
     );
     expect(partial.rows[0].n).toBe(0);
-    await db.exec(
-      `update public.rounds set lock_manifest = null, status = 'open' where id = '${round2}'`,
-    );
+    await db.exec(`
+      delete from public.round_lock_private where round_id = '${round2}';
+      update public.rounds set lock_manifest = null, status = 'open' where id = '${round2}';
+    `);
   });
 
   it("reclaims an interrupted process without applying the round twice", async () => {
@@ -436,5 +438,73 @@ describe("Phase 3 round machine (PGlite, local — not hosted Supabase)", () => 
         teams: [],
       }),
     ).toThrow(/exactly 20/);
+  });
+});
+
+describe("unpublished void restore (PGlite, not hosted)", () => {
+  let restoreDb: PGlite;
+  let restoreExec: Executor;
+  let restoreRounds: { id: string; round_index: number; event_code: string | null }[];
+
+  beforeAll(async () => {
+    restoreDb = await createPglite();
+    restoreExec = executor(restoreDb);
+    await fixtureUsers(restoreDb);
+    const { rows } = await restoreDb.query<{ id: string; round_index: number; event_code: string | null }>(
+      `select id, round_index, event_code from public.rounds order by round_index`,
+    );
+    restoreRounds = rows;
+  }, 60_000);
+
+  afterAll(async () => {
+    await restoreDb?.close();
+  });
+
+  it("returns a voided round to scheduled without skipping the Pack A event or counting as published", async () => {
+    const r1 = restoreRounds[0].id;
+    const r2 = restoreRounds[1].id;
+    await openRound(restoreExec, r1, USER_ORG);
+    await lockRound(restoreExec, r1, USER_ORG);
+    const token = randomUUID();
+    await processClaimedRound(restoreExec, { roundId: r1, actorId: USER_ORG, token });
+    await publishWithRecompute(restoreExec, { roundId: r1, actorId: USER_ORG, token });
+
+    await openRound(restoreExec, r2, USER_ORG);
+    const voided = await voidRound(restoreExec, r2, USER_ORG);
+    expect(voided.status).toBe("void");
+    const privateAfterVoid = await restoreDb.query<{ n: number }>(
+      `select count(*)::int as n from public.round_lock_private where round_id = '${r2}'`,
+    );
+    expect(privateAfterVoid.rows[0].n).toBe(0);
+
+    await expect(openRound(restoreExec, restoreRounds[2].id, USER_ORG)).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
+    await expect(openRound(restoreExec, r2, USER_ORG)).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
+
+    await asUser(restoreDb, USER_A, async () => {
+      await expect(restoreVoidedRound(restoreExec, r2, USER_A)).rejects.toMatchObject({
+        httpStatus: 403,
+      });
+    });
+
+    const restored = await restoreVoidedRound(restoreExec, r2, USER_ORG);
+    expect(restored.status).toBe("scheduled");
+    expect(restored.idempotent).toBe(false);
+    const again = await restoreVoidedRound(restoreExec, r2, USER_ORG);
+    expect(again.idempotent).toBe(true);
+    const event = await restoreDb.query<{ event_code: string | null; status: string }>(
+      `select event_code, status from public.rounds where id = '${r2}'`,
+    );
+    expect(event.rows[0].status).toBe("scheduled");
+    expect(event.rows[0].event_code).toBe("HEATWAVE");
+
+    const reopened = await openRound(restoreExec, r2, USER_ORG);
+    expect(reopened.status).toBe("open");
+    await expect(restoreVoidedRound(restoreExec, r2, USER_ORG)).rejects.toMatchObject({
+      code: "invalid_transition",
+    });
   });
 });
