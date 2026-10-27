@@ -32,7 +32,8 @@ Service role on the server only. No demo flags in the production build.
 | Auth outage | Pause competition; do not silently extend after the fact |
 | Need more time | Organiser updates `closes_at` **only while `open`**, audited |
 | Lab Wi‑Fi down 5 minutes | If still `open`, extend `closes_at`. If `locked` unpublished, wait and process. If `published`, do not rewind |
-| Wrong catalogue after publish | `void` the round, restore previous states as current, new engine version. Never patch published rows |
+| Wrong catalogue after publish | **Do not void.** `void_round` refuses `published` and would otherwise delete `town_states`. Keep the published scores. Engine-version incidents are an operator policy decision, not a score rewrite. Never patch published rows |
+| Unpublished void (misclick / broken process) | Control room **Restore** returns that round to `scheduled`. Open stamps a new 18-minute window. This is the same Pack A year — it does not skip to n+1 |
 | Abandoned team | Default hold (rules §6) |
 | Organiser misclick lock | If unpublished and before process, deputy may `open` again with audit. After `town_states` exist, no reopen |
 | Tie | Scoring tie-break; no organiser vote on the number |

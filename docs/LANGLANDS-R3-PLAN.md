@@ -528,7 +528,7 @@ Load: 80 users (20×4), 5s polling plus 20 submits at T−10s. Target: p95 submi
 | Checksum mismatch | Stay locked; compare two dumps; do not hand-edit scores |
 | Auth outage | Pause competition; do not extend a round retroactively without an audited organiser action |
 | Need extra time | Organiser updates `closes_at` **only while `open`** |
-| Wrong catalogue discovered after publish | Void the round (`void`), restore previous `town_states` as current, ship a new engine version; never patch published JSON in place |
+| Wrong catalogue discovered after publish | Do not void a published round (`void_round` refuses it). Keep published scores. Never patch published JSON in place. Unpublished voids restore to `scheduled` for the same round index |
 
 Backups: Supabase PITR enabled before rehearsal. Snapshot after each published round.
 

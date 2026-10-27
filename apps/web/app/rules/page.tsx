@@ -101,13 +101,13 @@ export default function RulesPage() {
           Need a Team ID? Return to{" "}
           <a href="/sign-in#sign-in" className="text-gold underline-offset-4 hover:underline">
             sign in
-          </a>. Credentials are issued by the organiser.
+          </a>. Credentials are issued with your invite.
         </p>
 
         <section className="mt-14">
           <h2 className="font-serif text-2xl text-parchment-paper">Competition format</h2>
           <ul className="mt-4 list-disc space-y-2 pl-5 font-sans text-sm leading-7 text-mist-bright">
-            <li>20 teams, seats 1–20, pre-created by the organiser. 2–5 members per team.</li>
+            <li>20 teams, seats 1–20, created before the event. 2–5 members per team.</li>
             <li>
               Shared town: Ashfen. Currency: credits. Starting reserve: {STARTING_RESERVE} credits.
             </li>

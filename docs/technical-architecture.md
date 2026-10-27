@@ -37,8 +37,9 @@ Python remains the design lab (`score_lab.py` physics, `official_score.py` score
 | `POST /api/rounds/:id/open` | Node | organiser |
 | `POST /api/rounds/:id/lock` | Node | organiser |
 | `POST /api/rounds/:id/process` | Node | organiser |
-| `POST /api/rounds/:id/publish` | Node | organiser; recomputes from `lock_manifest` |
+| `POST /api/rounds/:id/publish` | Node | organiser; recomputes from `round_lock_private` |
 | `POST /api/rounds/:id/void` | Node | organiser; unpublished only |
+| `POST /api/rounds/:id/restore` | Node | organiser; unpublished `void` → `scheduled` |
 | `GET /api/rounds/:id/support/:teamId` | Node | organiser; audited read |
 
 No Edge runtime for the processor (need deterministic `Decimal`/number behaviour and advisory locks via Supabase).
@@ -47,7 +48,7 @@ No Edge runtime for the processor (need deterministic `Decimal`/number behaviour
 
 `scheduled → open → locked → processing → published`
 
-`void` is allowed from `open` / `locked` / `processing`, never from `published`. Ops recover a failed process by retrying `claim_process` (no successful run) or by `save_process_run(..., ok=false)` which reverts to `locked`. There is no score-edit transition.
+`void` is allowed from `open` / `locked` / `processing`, never from `published`. An unpublished void may be restored to `scheduled` (`restore_voided_round`) so the same round index and Pack A event can be opened again. Restore is refused if later rounds have already started or if `town_states` / `published_results` exist. Void does not count as published and does not skip a year. Ops recover a failed process by retrying `claim_process` (no successful run) or by `save_process_run(..., ok=false)` which reverts to `locked`. There is no score-edit transition.
 
 `paused` is a competition-level flag that prevents `scheduled → open`. Round *n* cannot open until *n−1* is `published`.
 

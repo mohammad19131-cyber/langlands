@@ -11,7 +11,7 @@
 
 ## Prerequisites (do not skip)
 
-1. Hosted migrations through **`0008_reject_disqualified_submit.sql`** applied (`0001`–`0008` in order).
+1. Isolated test database migrations through **`0012_teams_hash_column_grants.sql`** applied (`0001`–`0012` in order). Never point this procedure at the existing hosted competition unless an operator has explicitly chosen that project.
 2. `apps/web/.env.local` (and Vercel) has:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
