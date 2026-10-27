@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { PublicChrome } from "../../components/entry/PublicChrome";
 import { getPublicSupabaseConfig } from "../../lib/env";
-import { userIsOrganiser } from "../../lib/server/authz";
-import { getSessionState } from "../../lib/session";
+import {
+  credentialSafeSignInPath,
+  queryHasSecret,
+  signInErrorMessage,
+} from "../../lib/sign-in-request";
 import { SignInForm } from "./SignInForm";
 
 export const metadata = {
@@ -11,12 +14,29 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SignInPage() {
-  const config = getPublicSupabaseConfig();
-  const session = await getSessionState();
-  if (session.kind === "signed_in") {
-    redirect((await userIsOrganiser(session.userId)) ? "/room" : "/play");
+export default async function SignInPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const incoming = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === "string") incoming.set(key, value);
   }
+  if (
+    queryHasSecret(incoming) ||
+    incoming.has("team-id") ||
+    incoming.has("teamId") ||
+    incoming.has("password")
+  ) {
+    redirect(credentialSafeSignInPath(`http://localhost/sign-in?${incoming.toString()}`));
+  }
+
+  const config = getPublicSupabaseConfig();
+  const initialError = signInErrorMessage(
+    typeof params.error === "string" ? params.error : null,
+  );
 
   return (
     <PublicChrome current="sign-in">
@@ -38,16 +58,14 @@ export default async function SignInPage() {
             <h1 className="font-serif text-3xl tracking-tight text-parchment-paper">
               Langlands R3
             </h1>
-            <p className="mx-auto mt-3 max-w-sm text-[0.86rem] leading-6 text-mist-bright">
-              An environmental strategy competition. Teams recover and manage Ashfen across six
-              rounds, balancing environmental health, public welfare, economic stability, and
-              resilience. Ranking uses an established automated scoring system.
+            <p className="mx-auto mt-3 max-w-xs text-[0.86rem] leading-6 text-mist-bright">
+              Twenty teams restore the town of Ashfen across six rounds.
             </p>
           </div>
 
           <div className="border border-gold/25 bg-forest-850/80 p-6 backdrop-blur">
             {config.configured ? (
-              <SignInForm />
+              <SignInForm initialError={initialError} />
             ) : (
               <div id="sign-in" className="scroll-mt-24 space-y-2">
                 <p className="text-[0.62rem] uppercase tracking-[0.16em] text-gold-soft">
@@ -67,14 +85,8 @@ export default async function SignInPage() {
             )}
           </div>
 
-          <div className="mt-6 space-y-3 text-center text-[0.78rem] leading-5 text-mist-bright">
-            <p>
-              Students sign in with the Team ID and password supplied by the competition organiser.
-              There is no self-registration or password reset on this page.
-            </p>
-            <p>
-              Organisers use this same form with their staff email and password — not a Team ID.
-            </p>
+          <div className="mt-6 space-y-2 text-center text-[0.78rem] leading-5 text-mist-bright">
+            <p>Sign in with your Team ID, or a staff email, and password. No self-registration.</p>
             <p className="text-[0.72rem] leading-5 text-mist">
               Scores, budgets, and results are decided on the server.
             </p>

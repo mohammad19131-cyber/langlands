@@ -15,6 +15,7 @@ describe("organiser login identifier", () => {
 
   it("routes digits to the team path and staff email to the organiser path", () => {
     expect(resolveLoginIdentifier("004")).toEqual({ kind: "team", teamId: "004" });
+    expect(resolveLoginIdentifier("team001")).toEqual({ kind: "team", teamId: "001" });
     expect(resolveLoginIdentifier(LOCAL_ORGANISER_EMAIL)).toEqual({
       kind: "organiser",
       email: LOCAL_ORGANISER_EMAIL,

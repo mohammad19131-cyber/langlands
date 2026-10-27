@@ -22,11 +22,18 @@ describe("parseQualifiedTeamId", () => {
     expect(parseQualifiedTeamId("25")).toBe("25");
   });
 
+  it("accepts team001 as the public username for Team 001", () => {
+    expect(parseQualifiedTeamId("team001")).toBe("001");
+    expect(parseQualifiedTeamId("Team001")).toBe("001");
+    expect(parseQualifiedTeamId(" team001 ")).toBe("001");
+  });
+
   it("rejects non-digit or empty values", () => {
     expect(parseQualifiedTeamId("ASHFEN-TEAM-01")).toBeNull();
     expect(parseQualifiedTeamId("seat-01")).toBeNull();
     expect(parseQualifiedTeamId("")).toBeNull();
     expect(parseQualifiedTeamId("12a")).toBeNull();
+    expect(parseQualifiedTeamId("team")).toBeNull();
   });
 });
 

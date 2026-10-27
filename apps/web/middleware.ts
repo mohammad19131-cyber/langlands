@@ -1,40 +1,84 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  cookieLooksLikeAuth,
+  middlewareDestination,
+  refreshAuthBestEffort,
+  shouldRefreshAuthSession,
+} from "./lib/middleware-gate";
+import { sanitizeSignInSearch } from "./lib/sign-in-request";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 /**
- * Refreshes the Auth cookie. Does not grant gameplay rights and does not
- * treat a missing project as a signed-in user.
+ * Refreshes the Auth cookie. Does not grant gameplay rights.
+ * Protected pages are gated by cookie presence here so RSC render never reads
+ * the GoTrue user or cookie values. A thrown getUser() must not 500 the request.
  */
 export async function middleware(request: NextRequest) {
+  if (request.nextUrl.pathname === "/sign-in" && request.method === "GET") {
+    const { leaked, search } = sanitizeSignInSearch(request.nextUrl.searchParams);
+    if (leaked) {
+      const clean = request.nextUrl.clone();
+      clean.search = search.toString();
+      return NextResponse.redirect(clean);
+    }
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   let response = NextResponse.next({ request });
 
-  if (!url || !anonKey) {
-    return response;
+  const cookies = request.cookies.getAll();
+  const hasAuthCookie = cookies.some((cookie) => cookieLooksLikeAuth(cookie.name));
+  let sessionConfirmed: boolean | null = null;
+
+  if (
+    url &&
+    anonKey &&
+    shouldRefreshAuthSession({
+      hasAuthCookie,
+      pathname: request.nextUrl.pathname,
+      cookies,
+    })
+  ) {
+    const supabase = createServerClient(url, anonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet: CookieToSet[]) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options),
+          );
+        },
+      },
+    });
+    const refreshed = await refreshAuthBestEffort(async () => {
+      const { data } = await supabase.auth.getUser();
+      sessionConfirmed = Boolean(data.user);
+    });
+    if (refreshed === "skipped") sessionConfirmed = false;
   }
 
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet: CookieToSet[]) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-      },
-    },
+  const destination = middlewareDestination({
+    pathname: request.nextUrl.pathname,
+    method: request.method,
+    hasAuthCookie,
+    sessionConfirmed,
   });
+  if (destination === "sign-in") {
+    return NextResponse.redirect(new URL("/sign-in", request.url));
+  }
+  if (destination === "play") {
+    return NextResponse.redirect(new URL("/play", request.url));
+  }
 
-  await supabase.auth.getUser();
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/).*)"],
 };

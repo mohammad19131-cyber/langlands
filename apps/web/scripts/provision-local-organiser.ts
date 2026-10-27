@@ -8,6 +8,7 @@ import { dirname, resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 import { LOCAL_ORGANISER_EMAIL } from "../lib/organiser-login";
 import { generateTeamPassword } from "../lib/team-password";
+import { assertProvisionTarget, organiserCredentialsTrust } from "../lib/supabase-target";
 
 const ENV_PATH = resolve(process.cwd(), "apps/web/.env.local");
 const CREDENTIALS_PATH = resolve(process.cwd(), ".organiser-local.json");
@@ -39,6 +40,25 @@ async function main() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   if (!url || !key) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
+  }
+  const target = assertProvisionTarget(url);
+  if (!target.ok) {
+    throw new Error(target.error);
+  }
+  if (existsSync(CREDENTIALS_PATH)) {
+    try {
+      const existing = JSON.parse(readFileSync(CREDENTIALS_PATH, "utf8")) as unknown;
+      const trust = organiserCredentialsTrust(existing, url);
+      if (!trust.ok) {
+        process.stderr.write(
+          `Existing organiser credentials file is not valid for this target (${trust.reason}). It will not be used.\n`,
+        );
+      }
+    } catch {
+      process.stderr.write(
+        "Existing organiser credentials file could not be parsed and will not be used.\n",
+      );
+    }
   }
   if (process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Service role must not be exposed as NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY.");
@@ -152,6 +172,7 @@ async function main() {
         password,
         userId,
         competitionId: competition.id,
+        projectRef: target.ref,
         createdAt: new Date().toISOString(),
         warning: "Local development only. Gitignored. Not a team account.",
       },

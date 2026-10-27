@@ -1,16 +1,20 @@
 /**
  * Qualified Team IDs are the public login usernames (e.g. 004, 010, 025).
  * They are not seat numbers and not internal UUIDs.
+ * `team001` is the same username as `001` — GoTrue still uses the internal
+ * Auth alias, which is never a player-facing email.
  */
 
 export const QUALIFIED_TEAM_ID_PATTERN = /^[0-9]{1,6}$/;
+export const TEAM_USERNAME_PATTERN = /^team([0-9]{1,6})$/i;
 export const REQUIRED_TEAM_COUNT = 20;
 
 /** Normalize raw input; preserve leading zeros. Returns null if invalid. */
 export function parseQualifiedTeamId(raw: string): string | null {
   const normalized = raw.trim().replace(/\s+/g, "");
-  if (!QUALIFIED_TEAM_ID_PATTERN.test(normalized)) return null;
-  return normalized;
+  if (QUALIFIED_TEAM_ID_PATTERN.test(normalized)) return normalized;
+  const prefixed = TEAM_USERNAME_PATTERN.exec(normalized);
+  return prefixed?.[1] ?? null;
 }
 
 export type ProvisionListResult =

@@ -1,50 +1,67 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { resolveLoginIdentifier } from "../../lib/organiser-login";
+import {
+  SIGN_IN_FORM,
+  credentialSafeSignInPath,
+  signInErrorMessage,
+} from "../../lib/sign-in-request";
 
-export function SignInForm() {
+export function SignInForm({ initialError = null }: { initialError?: string | null }) {
   const router = useRouter();
   const errorId = useId();
   const [teamId, setTeamId] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError);
   const [pending, setPending] = useState(false);
 
-  async function signIn(event: FormEvent) {
+  useEffect(() => {
+    const safe = credentialSafeSignInPath(window.location.href);
+    if (`${window.location.pathname}${window.location.search}` !== safe) {
+      window.history.replaceState({}, "", safe);
+    }
+  }, []);
+
+  async function signIn(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setPending(true);
     setError(null);
 
     const identifier = resolveLoginIdentifier(teamId);
     if (identifier.kind === "invalid") {
-      setError("Enter your Team ID (digits only, e.g. 004) or organiser email.");
+      setError("Enter your Team ID (digits only, e.g. 004) or a staff email.");
       setPending(false);
       return;
     }
 
-    const response = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify(
-        identifier.kind === "team"
-          ? { teamId: identifier.teamId, password }
-          : { email: identifier.email, password },
-      ),
-    });
+    try {
+      const response = await fetch(SIGN_IN_FORM.action, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "include",
+        body: JSON.stringify(
+          identifier.kind === "team"
+            ? { teamId: identifier.teamId, password }
+            : { email: identifier.email, password },
+        ),
+      });
 
-    if (!response.ok) {
-      const data = (await response.json().catch(() => null)) as { error?: string } | null;
-      setError(data?.error ?? "Team ID or password is incorrect.");
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        setError(data?.error ?? "Team ID or password is incorrect.");
+        setPending(false);
+        return;
+      }
+
+      const data = (await response.json().catch(() => null)) as { next?: string } | null;
+      router.push(data?.next === "/room" ? "/room" : "/play");
+      router.refresh();
+    } catch {
+      setError("Sign-in temporarily unavailable.");
       setPending(false);
-      return;
     }
-
-    const data = (await response.json().catch(() => null)) as { next?: string } | null;
-    router.push(data?.next === "/room" ? "/room" : "/play");
-    router.refresh();
   }
 
   const invalid = Boolean(error);
@@ -52,16 +69,22 @@ export function SignInForm() {
     "w-full border bg-black/30 px-3 py-2.5 text-sm text-parchment-paper placeholder-mist-dim focus:border-gold-soft";
 
   return (
-    <form id="sign-in" onSubmit={signIn} className="scroll-mt-24 space-y-2.5">
+    <form
+      id="sign-in"
+      method={SIGN_IN_FORM.method}
+      action={SIGN_IN_FORM.action}
+      onSubmit={signIn}
+      className="scroll-mt-24 space-y-2.5"
+    >
       <label
         className="block text-[0.62rem] uppercase tracking-[0.16em] text-mist"
         htmlFor="team-id"
       >
-        Team ID or organiser email
+        Team ID or staff email
       </label>
       <input
         id="team-id"
-        name="team-id"
+        name={SIGN_IN_FORM.identifierField}
         type="text"
         required
         autoComplete="username"
@@ -72,7 +95,7 @@ export function SignInForm() {
         aria-invalid={invalid || undefined}
         aria-describedby={invalid ? errorId : undefined}
         className={`${fieldClass} ${invalid ? "border-state-danger" : "border-gold/30"}`}
-        placeholder="004 or organiser email"
+        placeholder="team001 or 004"
       />
 
       <label
@@ -83,7 +106,7 @@ export function SignInForm() {
       </label>
       <input
         id="password"
-        name="password"
+        name={SIGN_IN_FORM.passwordField}
         type="password"
         required
         autoComplete="current-password"

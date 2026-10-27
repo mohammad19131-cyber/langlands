@@ -7,6 +7,7 @@ export type SessionState =
   | { kind: "anonymous" }
   | { kind: "signed_in"; email: string | null; userId: string };
 
+/** For Route Handlers only. Do not call from a page Server Component — cookies() leaks into RSC. */
 export async function getSessionState(): Promise<SessionState> {
   const publicConfig = getPublicSupabaseConfig();
   if (!publicConfig.configured) return { kind: "not_configured" };
@@ -17,7 +18,6 @@ export async function getSessionState(): Promise<SessionState> {
   const rawEmail = data.user.email ?? null;
   return {
     kind: "signed_in",
-    // Strip opaque Auth identities from any session surface.
     email: isSystemAuthEmail(rawEmail) ? null : rawEmail,
     userId: data.user.id,
   };

@@ -31,7 +31,7 @@ export async function requireUser(): Promise<
   }
   return {
     ok: true,
-    user: { userId: data.user.id, email: data.user.email ?? null },
+    user: { userId: data.user.id, email: null },
   };
 }
 

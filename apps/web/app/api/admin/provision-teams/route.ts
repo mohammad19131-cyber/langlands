@@ -3,6 +3,7 @@ import { getPublicSupabaseConfig, hasServiceRole } from "../../../../lib/env";
 import { createServiceRoleClient } from "../../../../lib/supabase/admin";
 import { createServerSupabase } from "../../../../lib/supabase/server";
 import { provisionQualifiedTeams } from "../../../../lib/server/provision-teams";
+import { assertProvisionTarget } from "../../../../lib/supabase-target";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,6 +23,11 @@ export async function POST(request: Request) {
       { error: "Supabase is not configured on the server." },
       { status: 503 },
     );
+  }
+
+  const target = assertProvisionTarget(publicConfig.url);
+  if (!target.ok) {
+    return NextResponse.json({ error: target.error }, { status: 403 });
   }
 
   let body: unknown;
