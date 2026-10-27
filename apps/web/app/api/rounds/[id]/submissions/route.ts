@@ -11,6 +11,7 @@ import { createServerSupabase } from "../../../../../lib/supabase/server";
 import { requireConfigured, requireTeamMember, requireUser } from "../../../../../lib/server/authz";
 import { jsonError } from "../../../../../lib/server/json";
 import { loadPreTownForTeam } from "../../../../../lib/server/load-town";
+import { submissionClosedMessage } from "../../../../../lib/submission-closed";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -127,7 +128,7 @@ export async function POST(
   }
   const result = data as { ok?: boolean; status?: string; error?: string; id?: string };
   if (!result?.ok) {
-    return jsonError(403, "closed", "Deadline passed. Waiting for results.");
+    return jsonError(403, "closed", submissionClosedMessage(round.status as string));
   }
 
   const spend = sectorSpendOnly(dry.sectorSpend);

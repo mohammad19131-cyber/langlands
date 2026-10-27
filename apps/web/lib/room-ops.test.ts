@@ -3,6 +3,9 @@ import {
   actionEndpoint,
   assertNoPrivateRoomFields,
   buildSeatsForRound,
+  canExtend,
+  canReopen,
+  canRestore,
   canVoid,
   currentRoomRound,
   deriveSeatStatus,
@@ -55,6 +58,12 @@ describe("pre-event scheduled field", () => {
     ).toBe("none");
     expect(currentRoomRound(scheduledSix)?.index).toBe(1);
     expect(publicationReady(scheduledSix[0]!)).toBe(false);
+    const r1Void = [
+      round({ index: 1, status: "void" }),
+      ...scheduledSix.slice(1),
+    ];
+    expect(currentRoomRound(r1Void)?.index).toBe(1);
+    expect(canRestore(r1Void[0]!.status)).toBe(true);
   });
 
   it("shows twenty missing seats and no results when nothing has opened", () => {
@@ -91,6 +100,14 @@ describe("round transitions", () => {
     expect(nextRoomAction({ round: published, rounds: [published] })).toBe("none");
     expect(canVoid("published")).toBe(false);
     expect(canVoid("open")).toBe(true);
+    expect(canExtend("open")).toBe(true);
+    expect(canExtend("locked")).toBe(false);
+    expect(canReopen(locked)).toBe(true);
+    expect(canReopen(published)).toBe(false);
+    expect(canReopen(ready)).toBe(false);
+    expect(canRestore("void")).toBe(true);
+    expect(canRestore("published")).toBe(false);
+    expect(canRestore("scheduled")).toBe(false);
   });
 
   it("blocks publish when the checksum is missing or the last run failed", () => {
@@ -227,6 +244,8 @@ describe("lock manifest privacy and checksum recovery", () => {
 
   it("points checksum failures at retrying process, not publishing", () => {
     expect(recoveryGuidance("checksum mismatch")).toMatch(/do not publish/i);
+    expect(recoveryGuidance("predecessor not published")).toMatch(/restore the voided round/i);
+    expect(recoveryGuidance("cannot restore")).toMatch(/unpublished voided round/i);
     expect(recoveryGuidance("unauthorized")).toBe("Not available.");
   });
 
@@ -236,6 +255,7 @@ describe("lock manifest privacy and checksum recovery", () => {
     expect(actionEndpoint("process", "abc")).toBe("/api/rounds/abc/process");
     expect(actionEndpoint("publish", "abc")).toBe("/api/rounds/abc/publish");
     expect(actionEndpoint("void", "abc")).toBe("/api/rounds/abc/void");
+    expect(actionEndpoint("restore", "abc")).toBe("/api/rounds/abc/restore");
   });
 });
 

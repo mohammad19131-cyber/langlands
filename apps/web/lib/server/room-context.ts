@@ -55,14 +55,14 @@ export async function loadRoomContext(): Promise<RoomContext> {
   }
   const supabase = await createServerSupabase();
   const auth = supabase ? await supabase.auth.getUser() : null;
-  const user = auth?.data.user ?? null;
-  if (!user) return { ok: false, status: 401, error: "unauthorized" };
+  const userId = auth?.data.user?.id ?? null;
+  if (!userId) return { ok: false, status: 401, error: "unauthorized" };
 
   const admin = createServiceRoleClient();
   const { data: staffRow } = await admin
     .from("competition_staff")
     .select("competition_id, staff_role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("staff_role", "organiser")
     .limit(1)
     .maybeSingle();

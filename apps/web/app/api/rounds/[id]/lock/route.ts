@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "../../../../../lib/supabase/admin";
 import { requireConfigured, requireOrganiser, requireUser } from "../../../../../lib/server/authz";
 import { jsonError } from "../../../../../lib/server/json";
+import { organiserLockHttpBody } from "../../../../../lib/private-lock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -36,5 +37,7 @@ export async function POST(
     _action: "lock_round",
     _payload: { roundId },
   });
-  return Response.json(data);
+  const rpc =
+    data && typeof data === "object" && !Array.isArray(data) ? (data as Record<string, unknown>) : { ok: true };
+  return Response.json(organiserLockHttpBody(rpc));
 }

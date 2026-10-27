@@ -35,7 +35,8 @@ function asSubmission(allocations: Allocations | null, projectStarts: string[] |
 
 function runOnce(input: TeamRoundInput, roundIndex: number): TownStateRow {
   const town = cloneTown(input.preTown);
-  const hold = input.allocations === null && (input.projectStarts === null || input.projectStarts.length === 0);
+  const hold =
+    input.allocations == null && (input.projectStarts == null || input.projectStarts.length === 0);
   const submission = asSubmission(input.allocations, input.projectStarts);
   const result = stepRound(town, submission, roundIndex);
   const snaps = [...input.previousSnapshots, result.snapshot.snapshot];

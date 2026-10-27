@@ -3,7 +3,16 @@ import type { RoundPhase } from "./game-types";
 export const SEAT_STATUSES = ["missing", "saved", "accepted", "late", "dq"] as const;
 export type SeatStatus = (typeof SEAT_STATUSES)[number];
 
-export type RoomAction = "open" | "lock" | "process" | "publish" | "void" | "none";
+export type RoomAction =
+  | "open"
+  | "lock"
+  | "process"
+  | "publish"
+  | "void"
+  | "reopen"
+  | "extend"
+  | "restore"
+  | "none";
 
 export type ManifestSeat = {
   seat: number;
@@ -90,6 +99,21 @@ export function canVoid(status: RoundPhase): boolean {
   return status === "open" || status === "locked" || status === "processing";
 }
 
+/** Runbook: unpublished lock may return to open before process writes town states. */
+export function canReopen(round: RoomRound | null): boolean {
+  if (!round) return false;
+  return round.status === "locked" && !round.processChecksum && !round.processedAt;
+}
+
+export function canExtend(status: RoundPhase): boolean {
+  return status === "open";
+}
+
+/** Unpublished void returns to scheduled. Does not skip the Pack A event. */
+export function canRestore(status: RoundPhase): boolean {
+  return status === "void";
+}
+
 export function publicationReady(round: RoomRound | null, lastRun?: ProcessRunView | null): boolean {
   if (!round) return false;
   const run = lastRun ?? round.lastRun;
@@ -171,11 +195,17 @@ export function recoveryGuidance(error: string | null | undefined): string | nul
   if (text.includes("checksum")) {
     return "Stay locked. Dump both replays. Retry process — do not publish or hand-edit JSON.";
   }
+  if (text.includes("cannot reopen")) {
+    return "Reopen is only for an unpublished lock before process writes town states. After process, stay locked or void.";
+  }
   if (text.includes("predecessor")) {
-    return "Publish the previous round before opening this one. Round n cannot open until n−1 is published.";
+    return "Publish the previous round before opening this one. Round n cannot open until n−1 is published. Void does not count as published — restore the voided round instead of skipping it.";
+  }
+  if (text.includes("cannot restore")) {
+    return "Restore is only for an unpublished voided round with no later round already started. It returns that same round to scheduled.";
   }
   if (text.includes("paused")) {
-    return "The competition is paused. Open is blocked until an organiser resumes it.";
+    return "The competition is paused. Open is blocked until it resumes.";
   }
   if (text.includes("invalid transition")) {
     return "That step is not valid from the current round status. Refresh and take the next allowed action only.";
@@ -196,6 +226,7 @@ export function recoveryGuidance(error: string | null | undefined): string | nul
 }
 
 export function actionEndpoint(action: Exclude<RoomAction, "none">, roundId: string): string {
+  if (action === "extend") return `/api/rounds/${roundId}/window`;
   return `/api/rounds/${roundId}/${action}`;
 }
 
@@ -207,6 +238,7 @@ export function currentRoomRound(rounds: RoomRound[]): RoomRound | null {
   return (
     rounds.find((row) => row.status === "open") ??
     rounds.find((row) => row.status === "locked" || row.status === "processing") ??
+    rounds.find((row) => row.status === "void") ??
     rounds.find((row) => row.status === "scheduled") ??
     rounds.filter((row) => row.status === "published").at(-1) ??
     rounds[0] ??

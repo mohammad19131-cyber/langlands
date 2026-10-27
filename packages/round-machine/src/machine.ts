@@ -45,7 +45,14 @@ function mapSqlError(error: unknown): never {
   if (text.includes("checksum mismatch")) {
     throw new RoundMachineError("checksum mismatch", 409, "checksum");
   }
-  if (text.includes("invalid transition") || text.includes("predecessor") || text.includes("paused")) {
+  if (
+    text.includes("invalid transition") ||
+    text.includes("predecessor") ||
+    text.includes("paused") ||
+    text.includes("cannot reopen") ||
+    text.includes("cannot restore") ||
+    text.includes("cannot void")
+  ) {
     throw new RoundMachineError(message.replace(/^error:\s*/i, ""), 409, "invalid_transition");
   }
   if (text.includes("exactly 20")) {
@@ -153,6 +160,45 @@ export async function openRound(db: Executor, roundId: string, actorId: string) 
       roundId,
     ]);
     return row.open_round;
+  } catch (error) {
+    mapSqlError(error);
+  }
+}
+
+export async function setRoundWindow(
+  db: Executor,
+  roundId: string,
+  closesAt: string,
+  actorId: string,
+) {
+  try {
+    const row = await scalar<{ set_round_window: Record<string, unknown> }>(
+      db,
+      `select public.set_round_window($1::uuid, $2::timestamptz, $3::uuid) as set_round_window`,
+      [roundId, closesAt, actorId],
+    );
+    await db.query(
+      `select public.audit_append($1::uuid, (select competition_id from public.rounds where id = $2::uuid), null, 'set_round_window', jsonb_build_object('roundId', $2::text, 'closesAt', $3::text))`,
+      [actorId, roundId, closesAt],
+    );
+    return row.set_round_window;
+  } catch (error) {
+    mapSqlError(error);
+  }
+}
+
+export async function reopenRound(db: Executor, roundId: string, actorId: string) {
+  try {
+    const row = await scalar<{ reopen_round: Record<string, unknown> }>(
+      db,
+      `select public.reopen_round($1::uuid, $2::uuid) as reopen_round`,
+      [roundId, actorId],
+    );
+    await db.query(
+      `select public.audit_append($1::uuid, (select competition_id from public.rounds where id = $2::uuid), null, 'reopen_round', jsonb_build_object('roundId', $2::text))`,
+      [actorId, roundId],
+    );
+    return row.reopen_round;
   } catch (error) {
     mapSqlError(error);
   }
@@ -409,6 +455,23 @@ export async function voidRound(db: Executor, roundId: string, actorId: string) 
   }
 }
 
+export async function restoreVoidedRound(db: Executor, roundId: string, actorId: string) {
+  try {
+    const row = await scalar<{ restore_voided_round: Record<string, unknown> }>(
+      db,
+      `select public.restore_voided_round($1::uuid, $2::uuid) as restore_voided_round`,
+      [roundId, actorId],
+    );
+    await db.query(
+      `select public.audit_append($1::uuid, (select competition_id from public.rounds where id = $2::uuid), null, 'restore_voided_round', jsonb_build_object('roundId', $2::text))`,
+      [actorId, roundId],
+    );
+    return row.restore_voided_round;
+  } catch (error) {
+    mapSqlError(error);
+  }
+}
+
 export async function supportRead(
   db: Executor,
   args: { actorId: string; competitionId: string; teamId: string; action: string },
@@ -439,12 +502,11 @@ export async function publishWithRecompute(
   const round = await scalar<{
     competition_id: string;
     round_index: number;
-    lock_manifest: LockEntry[];
     process_checksum: string | null;
     status: string;
   }>(
     db,
-    `select competition_id, round_index, lock_manifest, process_checksum, status
+    `select competition_id, round_index, process_checksum, status
        from public.rounds where id = $1`,
     [args.roundId],
   );
@@ -452,7 +514,15 @@ export async function publishWithRecompute(
   if (round.status === "published") {
     return { ok: true, status: "published", idempotent: true };
   }
-  if (!round.lock_manifest || !round.process_checksum) {
+  if (!round.process_checksum) {
+    throw new RoundMachineError("process has not completed", 409, "invalid_transition");
+  }
+  const privateLock = await scalar<{ payload: LockEntry[] }>(
+    db,
+    `select payload from public.round_lock_private where round_id = $1`,
+    [args.roundId],
+  );
+  if (!privateLock?.payload) {
     throw new RoundMachineError("process has not completed", 409, "invalid_transition");
   }
   const catalogue = await scalar<{ catalogue_hash: string }>(
@@ -464,7 +534,7 @@ export async function publishWithRecompute(
     competitionId: round.competition_id,
     roundIndex: round.round_index,
     catalogueHash: catalogue.catalogue_hash,
-    manifest: round.lock_manifest,
+    manifest: privateLock.payload,
   });
   if (output.checksum !== round.process_checksum) {
     throw new RoundMachineError("checksum mismatch", 409, "checksum");

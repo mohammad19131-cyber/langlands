@@ -7,6 +7,9 @@ import { clockLabel, formatClockTime, remainingMs } from "../../lib/clock";
 import { EVENT_LABELS } from "../../lib/format";
 import {
   buildSeatsForRound,
+  canExtend,
+  canReopen,
+  canRestore,
   canVoid,
   currentRoomRound,
   missingCount,
@@ -24,7 +27,7 @@ type LiveRoom = Extract<RoomContext, { ok: true }>;
 const ACTION_COPY: Record<Exclude<RoomAction, "none">, { title: string; body: string }> = {
   open: {
     title: "Open this round?",
-    body: "Teams will be able to submit until the server closing time. The browser clock is not authoritative.",
+    body: "The server stamps an 18-minute window from now. Teams submit until that closing time. The browser clock is not authoritative.",
   },
   lock: {
     title: "Lock this round?",
@@ -40,7 +43,19 @@ const ACTION_COPY: Record<Exclude<RoomAction, "none">, { title: string; body: st
   },
   void: {
     title: "Void this unpublished round?",
-    body: "Void is for a broken unpublished round. Published rows are never patched. This is irreversible for this round.",
+    body: "Void abandons this unpublished round. Published scores are never rewritten. Later rounds still cannot skip this round — restore it to scheduled if the same Pack A year must be played.",
+  },
+  restore: {
+    title: "Restore this voided round?",
+    body: "The round returns to scheduled. Open stamps a new 18-minute window. This does not skip the event and does not rewrite published scores.",
+  },
+  reopen: {
+    title: "Reopen this locked round?",
+    body: "Teams can save again until the existing server closing time. Reopen is only allowed before process writes town states. Published rounds cannot be reopened.",
+  },
+  extend: {
+    title: "Add five minutes?",
+    body: "The server closing time moves forward five minutes from the later of now or the current close. The browser clock is not authoritative.",
   },
 };
 
@@ -53,6 +68,7 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [sampledAt, setSampledAt] = useState(() => Date.now());
 
   const selected = room.rounds.find((row) => row.id === selectedId) ?? currentRoomRound(room.rounds);
   const seats = buildSeatsForRound({
@@ -67,7 +83,7 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     competitionPaused: room.competition.paused,
     lastRun: selected?.lastRun ?? null,
   });
-  const remaining = remainingMs(selected?.closesAt ?? null, room.serverNow, Date.now() + tick * 0);
+  const remaining = remainingMs(selected?.closesAt ?? null, room.serverNow, Date.now() + tick * 0, sampledAt);
   const missing = missingCount(seats);
   const canPublish = publicationReady(selected, selected?.lastRun ?? null);
 
@@ -75,6 +91,10 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     const id = window.setInterval(() => setTick((n) => n + 1), 1000);
     return () => window.clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    setSampledAt(Date.now());
+  }, [room.serverNow]);
 
   useEffect(() => {
     const poll = async () => {
@@ -105,7 +125,14 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     setError(null);
     setMessage(null);
     try {
-      const res = await fetch(`/api/rounds/${selected.id}/${next}`, { method: "POST" });
+      const res = await fetch(
+        next === "extend" ? `/api/rounds/${selected.id}/window` : `/api/rounds/${selected.id}/${next}`,
+        {
+          method: "POST",
+          headers: next === "extend" ? { "Content-Type": "application/json" } : undefined,
+          body: next === "extend" ? JSON.stringify({ extendMinutes: 5 }) : undefined,
+        },
+      );
       const data = (await res.json().catch(() => ({}))) as {
         ok?: boolean;
         status?: string;
@@ -145,9 +172,7 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     if (!confirm || !selected) return "";
     const base = ACTION_COPY[confirm].body;
     if (confirm === "open") {
-      return `${base} Server window: ${selected.opensAt ? formatClockTime(selected.opensAt) : "—"} → ${
-        selected.closesAt ? formatClockTime(selected.closesAt) : "—"
-      }.`;
+      return `${base} Scheduled seed times are ignored; open writes now → now + 18 minutes.`;
     }
     if (confirm === "lock") {
       return `${base} ${missing} seated team${missing === 1 ? "" : "s"} currently have no accepted save.`;
@@ -284,6 +309,11 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
               onClick={() => setConfirm("open")}
             />
             <ActionButton
+              label="Add 5 minutes"
+              disabled={!selected || !canExtend(selected.status) || busy}
+              onClick={() => setConfirm("extend")}
+            />
+            <ActionButton
               label="Lock"
               disabled={!selected || action !== "lock" || busy}
               onClick={() => setConfirm("lock")}
@@ -300,14 +330,26 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
               onClick={() => setConfirm("publish")}
             />
             <ActionButton
+              label="Reopen"
+              disabled={!selected || !canReopen(selected) || busy}
+              onClick={() => setConfirm("reopen")}
+            />
+            <ActionButton
               label="Void"
+              danger
               disabled={!selected || !canVoid(selected.status) || busy}
               onClick={() => setConfirm("void")}
             />
+            <ActionButton
+              label="Restore"
+              disabled={!selected || !canRestore(selected.status) || busy}
+              onClick={() => setConfirm("restore")}
+            />
           </div>
           <p className="text-[0.68rem] leading-5 text-[#8A8674]">
-            Every button calls the existing round APIs. Role checks run on the server. Published rounds
-            cannot be reopened.
+            Role checks run on the server. Opening stamps 18 minutes. Add 5 minutes only while open.
+            Reopen is only for an unpublished lock. Restore returns a voided round to scheduled.
+            Published rounds cannot be reopened or voided.
           </p>
         </section>
       </main>
@@ -336,9 +378,13 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
                 type="button"
                 disabled={busy}
                 onClick={() => void run(confirm)}
-                className="flex-1 border border-[#7BA157]/60 bg-[#2A4C39] px-3 py-2 text-[0.76rem] uppercase tracking-[0.08em] text-[#E7F0DE] hover:bg-[#335c44] disabled:opacity-50"
+                className={`flex-1 border px-3 py-2 text-[0.76rem] uppercase tracking-[0.08em] disabled:opacity-50 ${
+                  confirm === "void"
+                    ? "border-[#C0533E]/70 bg-[#5A241C] text-[#F0D8D3] hover:bg-[#6B2C22]"
+                    : "border-[#7BA157]/60 bg-[#2A4C39] text-[#E7F0DE] hover:bg-[#335c44]"
+                }`}
               >
-                {busy ? "Working…" : "Confirm"}
+                {busy ? "Working…" : confirm === "void" ? "Void round" : "Confirm"}
               </button>
             </div>
           </div>
@@ -376,11 +422,13 @@ function ActionButton({
   disabled,
   onClick,
   accent,
+  danger,
 }: {
   label: string;
   disabled: boolean;
   onClick: () => void;
   accent?: boolean;
+  danger?: boolean;
 }) {
   return (
     <button
@@ -388,9 +436,11 @@ function ActionButton({
       disabled={disabled}
       onClick={onClick}
       className={`border px-4 py-2 text-[0.74rem] uppercase tracking-[0.08em] ${
-        accent
-          ? "border-[#7BA157]/60 bg-[#2A4C39] text-[#E7F0DE] hover:bg-[#335c44]"
-          : "border-[#B89A60]/40 text-[#D7CFB8] hover:bg-white/5"
+        danger
+          ? "border-[#C0533E]/50 text-[#E7B9B0] hover:bg-[#C0533E]/10"
+          : accent
+            ? "border-[#7BA157]/60 bg-[#2A4C39] text-[#E7F0DE] hover:bg-[#335c44]"
+            : "border-[#B89A60]/40 text-[#D7CFB8] hover:bg-white/5"
       } disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-[#5F5B4D]`}
     >
       {label}

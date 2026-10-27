@@ -1,8 +1,9 @@
-import { processRound, type LockEntry, type TeamRoundInput } from "@langlands/round-machine";
+import { processRound, type TeamRoundInput } from "@langlands/round-machine";
 import { createServiceRoleClient } from "../../../../../lib/supabase/admin";
 import { requireConfigured, requireOrganiser, requireUser } from "../../../../../lib/server/authz";
 import { jsonError } from "../../../../../lib/server/json";
 import { loadPreTownForTeam } from "../../../../../lib/server/load-town";
+import { asPrivateLockEntries } from "../../../../../lib/private-lock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export async function POST(
   const admin = createServiceRoleClient();
   const { data: round } = await admin
     .from("rounds")
-    .select("id, competition_id, round_index, status, lock_manifest, process_checksum, process_claim_token")
+    .select("id, competition_id, round_index, status, process_checksum, process_claim_token")
     .eq("id", roundId)
     .maybeSingle();
   if (!round) return jsonError(404, "invalid", "unknown round");
@@ -29,8 +30,18 @@ export async function POST(
   if (round.status === "published") {
     return Response.json({ ok: true, status: "published", idempotent: true });
   }
-  if (round.status !== "processing" || !round.lock_manifest || !round.process_checksum) {
+  if (round.status !== "processing" || !round.process_checksum) {
     return jsonError(409, "invalid_transition", "process has not completed");
+  }
+
+  const { data: privateLock } = await admin
+    .from("round_lock_private")
+    .select("payload")
+    .eq("round_id", roundId)
+    .maybeSingle();
+  const manifest = asPrivateLockEntries(privateLock?.payload);
+  if (!manifest) {
+    return jsonError(409, "invalid_transition", "private lock capture is missing");
   }
 
   const { data: competition } = await admin
@@ -38,7 +49,6 @@ export async function POST(
     .select("catalogue_hash")
     .eq("id", round.competition_id)
     .single();
-  const manifest = round.lock_manifest as LockEntry[];
   const teams: TeamRoundInput[] = [];
   for (const entry of manifest) {
     const loaded = await loadPreTownForTeam(admin, round.competition_id, entry.teamId, round.round_index);

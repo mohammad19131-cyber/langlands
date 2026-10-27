@@ -56,7 +56,7 @@ export function SupportView({
           Seat {String(seat).padStart(2, "0")} · {loginId ? `Team ${loginId}` : name}
         </h1>
         <p className="text-[0.78rem] leading-6 text-[#8A8674]">
-          Audited organiser support read. This request is written to audit_logs. Players and judges do not
+          Audited support read. This request is written to audit_logs. Players and judges do not
           see this page.
         </p>
         {state === "loading" ? <p className="text-[#8A8674]">Reading the support API…</p> : null}
