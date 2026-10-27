@@ -3,6 +3,7 @@ node_modules/
 dist/
 *.tsbuildinfo
 .next/
+.next-release-check/
 .env
 .env.local
 .env.*.local
@@ -16,3 +17,5 @@ __pycache__/
 .env.local
 .env*.local
 .organiser-local.json
+.organiser-local.*.json
+.team-credentials.local.json

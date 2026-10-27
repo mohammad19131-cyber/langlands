@@ -4,6 +4,9 @@ import { fileURLToPath } from "node:url";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Isolated production checks can set NEXT_DIST_DIR so `next build` does not
+  // replace the running `next dev` output under .next.
+  distDir: process.env.NEXT_DIST_DIR?.trim() || ".next",
   transpilePackages: ["@langlands/sim", "@langlands/round-machine"],
   outputFileTracingRoot: path.join(fileURLToPath(new URL(".", import.meta.url)), "../.."),
   // packages/sim uses TypeScript ESM specifiers (./foo.js → foo.ts). Webpack
