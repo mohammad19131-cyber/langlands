@@ -9,10 +9,11 @@ import {
 import { parseTown, townBadges } from "@langlands/round-machine";
 import type { IndicatorKey, TownView } from "../ashfen";
 import type { Budget, EventCode, GameContext, RoundInfo, RoundPhase } from "../game-types";
-import { isSystemAuthEmail, publicPlayerLabel } from "../display-identity";
 import { getPublicSupabaseConfig, hasServiceRole } from "../env";
+import { publicPlayContext } from "../play-payload";
 import { createServerSupabase } from "../supabase/server";
 import { createServiceRoleClient } from "../supabase/admin";
+import { ownTownRead } from "../own-town-source";
 import {
   buildBoards,
   loadCompetitionRoster,
@@ -68,16 +69,15 @@ function computeBudget(preTown: Town, roundIndex: number): Budget {
 function previewContext(args: {
   configured: boolean;
   signedIn: boolean;
-  email: string | null;
   notice: string;
   isOrganiser?: boolean;
 }): GameContext {
   const town = createInitialTown();
-  return {
+  return publicPlayContext({
     mode: "preview",
     configured: args.configured,
     signedIn: args.signedIn,
-    email: args.email,
+    email: null,
     isOrganiser: Boolean(args.isOrganiser),
     team: null,
     competition: null,
@@ -102,7 +102,7 @@ function previewContext(args: {
     publishedRounds: [],
     roundSummaries: [],
     notice: args.notice,
-  };
+  });
 }
 
 type RoundRow = {
@@ -138,7 +138,6 @@ export async function loadGameContext(): Promise<GameContext> {
     return previewContext({
       configured,
       signedIn: false,
-      email: null,
       notice:
         "Preview mode — the competition backend is not configured in this environment. You can inspect Ashfen and stage decisions, but nothing can be submitted.",
     });
@@ -146,24 +145,29 @@ export async function loadGameContext(): Promise<GameContext> {
 
   const supabase = await createServerSupabase();
   const auth = supabase ? await supabase.auth.getUser() : null;
-  const user = auth?.data.user ?? null;
-  if (!user) {
+  const userId = auth?.data.user?.id ?? null;
+  if (!userId) {
     return previewContext({
       configured,
       signedIn: false,
-      email: null,
       notice: "Sign in with your invited team account to take command of Ashfen.",
     });
   }
 
   const admin = createServiceRoleClient();
 
-  const { data: membership } = await admin
-    .from("team_members")
-    .select("team_id, teams(id, name, seat, competition_id, login_id, disqualified)")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+  const [{ data: membership }, { data: allRoundRows }] = await Promise.all([
+    admin
+      .from("team_members")
+      .select("team_id, teams(id, name, seat, competition_id, login_id, disqualified)")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("rounds")
+      .select("id, round_index, status, opens_at, closes_at, event_code, competition_id")
+      .order("round_index"),
+  ]);
 
   const teamRaw = (membership as { teams?: unknown } | null)?.teams as
     | {
@@ -188,20 +192,26 @@ export async function loadGameContext(): Promise<GameContext> {
   if (!team) {
     const { data: staffRow } = await admin
       .from("competition_staff")
-      .select("staff_role")
-      .eq("user_id", user.id)
-      .eq("staff_role", "organiser")
+      .select("staff_role, competition_id")
+      .eq("user_id", userId)
       .limit(1)
       .maybeSingle();
-    const isOrganiser = (staffRow as { staff_role?: string } | null)?.staff_role === "organiser";
+    const staff = staffRow as { staff_role?: string; competition_id?: string } | null;
+    const isOrganiser = staff?.staff_role === "organiser";
+    if (staff?.competition_id) {
+      return loadStaffPlayContext(admin, {
+        configured,
+        competitionId: staff.competition_id,
+        isOrganiser,
+      });
+    }
     return previewContext({
       configured,
       signedIn: true,
-      email: isSystemAuthEmail(user.email) ? null : (user.email ?? null),
       isOrganiser,
       notice: isOrganiser
-        ? "Organiser accounts are not seated on a team. Open the control room to run the competition."
-        : "Your account is signed in but not seated on a team yet. Ask the organiser to add you to a team, then reload.",
+        ? "Staff accounts are not seated on a team. Open the control room to run the competition."
+        : "Your account is signed in but not seated on a team yet. Once your team is assigned, reload.",
     });
   }
 
@@ -209,42 +219,14 @@ export async function loadGameContext(): Promise<GameContext> {
     return previewContext({
       configured,
       signedIn: true,
-      email: null,
       notice: "This team has been disqualified and cannot take further decisions.",
     });
   }
 
   const competitionId = team.competition_id;
-
-  const [{ data: competitionRow }, staffLookup, { data: roundRows }] = await Promise.all([
-    admin
-      .from("competitions")
-      .select("id, title, round_count, status")
-      .eq("id", competitionId)
-      .maybeSingle(),
-    admin
-      .from("competition_staff")
-      .select("staff_role")
-      .eq("competition_id", competitionId)
-      .eq("user_id", user.id)
-      .maybeSingle(),
-    admin
-      .from("rounds")
-      .select("id, round_index, status, opens_at, closes_at, event_code")
-      .eq("competition_id", competitionId)
-      .order("round_index"),
-  ]);
-
-  const isOrganiser = (staffLookup.data as { staff_role?: string } | null)?.staff_role === "organiser";
-  const competition = competitionRow
-    ? {
-        id: (competitionRow as { id: string }).id,
-        title: (competitionRow as { title: string }).title,
-        roundCount: (competitionRow as { round_count: number }).round_count,
-      }
-    : { id: competitionId, title: "Langlands R3", roundCount: 6 };
-
-  const rounds = ((roundRows as RoundRow[] | null) ?? []).slice();
+  const rounds = (
+    (allRoundRows as Array<RoundRow & { competition_id: string }> | null) ?? []
+  ).filter((row) => row.competition_id === competitionId);
 
   // The round the player is acting on: open first, then in-flight, then the next
   // scheduled, otherwise the final published round (game complete).
@@ -257,19 +239,70 @@ export async function loadGameContext(): Promise<GameContext> {
   const activeRound = openRound ?? inFlight ?? scheduled ?? lastPublished ?? null;
   const roundSummaries = roundSummariesFrom(rounds);
   const publishedIds = publishedRounds.map((row) => row.id);
-  const [roster, publishedRows] = await Promise.all([
-    loadCompetitionRoster(admin, competitionId),
-    loadPublishedResultRows(admin, publishedIds),
-  ]);
-  const { boardByRound, publishedRounds: publishedIndexes } = buildBoards({
+  const townSource = ownTownRead({ activeRound, rounds });
+  const townQuery =
+    townSource.kind === "template"
+      ? admin
+          .from("town_templates")
+          .select("initial_state")
+          .eq("competition_id", competitionId)
+          .maybeSingle()
+      : townSource.kind === "state"
+        ? admin
+            .from("town_states")
+            .select("state, round_index")
+            .eq("team_id", team.id)
+            .eq("round_id", townSource.roundId)
+            .maybeSingle()
+        : Promise.resolve({ data: null });
+  const submissionQuery = openRound
+    ? admin
+        .from("submissions")
+        .select("allocations, project_starts, status")
+        .eq("round_id", openRound.id)
+        .eq("team_id", team.id)
+        .eq("status", "accepted")
+        .maybeSingle()
+    : Promise.resolve({ data: null });
+
+  const [{ data: competitionRow }, staffLookup, roster, publishedRows, townRow, subRow] =
+    await Promise.all([
+      admin
+        .from("competitions")
+        .select("id, title, round_count, status")
+        .eq("id", competitionId)
+        .maybeSingle(),
+      admin
+        .from("competition_staff")
+        .select("staff_role")
+        .eq("competition_id", competitionId)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      loadCompetitionRoster(admin, competitionId),
+      loadPublishedResultRows(admin, publishedIds),
+      townQuery,
+      submissionQuery,
+    ]);
+
+  const isOrganiser = (staffLookup.data as { staff_role?: string } | null)?.staff_role === "organiser";
+  const competition = competitionRow
+    ? {
+        id: (competitionRow as { id: string }).id,
+        title: (competitionRow as { title: string }).title,
+        roundCount: (competitionRow as { round_count: number }).round_count,
+      }
+    : { id: competitionId, title: "Langlands R3", roundCount: 6 };
+  const {
+    boardByRound,
+    publishedRounds: publishedIndexes,
+    publishedRoundIndex,
+    leaderboard,
+  } = buildBoards({
     roundSummaries,
     teams: roster,
     results: publishedRows,
     viewerSeat: team.seat,
   });
-  const publishedRoundIndex = lastPublished?.round_index ?? null;
-  const leaderboard =
-    publishedRoundIndex != null ? (boardByRound[publishedRoundIndex] ?? null) : null;
 
   // Resolve the town the player is looking at + the budget for the decision round.
   let town: Town;
@@ -277,44 +310,38 @@ export async function loadGameContext(): Promise<GameContext> {
   let displayRound: number;
   let budget: Budget;
   let notice: string | null = null;
+  const loadedTown =
+    townSource.kind === "template" && townRow?.data
+      ? parseTown((townRow.data as { initial_state: unknown }).initial_state)
+      : townSource.kind === "state" && townRow?.data
+        ? parseTown((townRow.data as { state: unknown }).state)
+        : null;
 
   if (activeRound && activeRound.status === "published") {
-    // All playable rounds resolved — show the player's own final town state.
-    const { data: ownState } = await admin
-      .from("town_states")
-      .select("state, round_index")
-      .eq("team_id", team.id)
-      .eq("round_id", activeRound.id)
-      .maybeSingle();
-    town = ownState
-      ? parseTown((ownState as { state: unknown }).state)
-      : createInitialTown();
+    town = loadedTown ?? createInitialTown();
     displayRound = activeRound.round_index;
     townLabel = `Ashfen · after round ${activeRound.round_index}`;
     budget = computeBudget(town, activeRound.round_index + 1);
     notice = "This round is published. Review the outcome and the standings.";
-  } else if (activeRound) {
-    const loaded = await loadPreTown(admin, competitionId, team.id, activeRound.round_index);
-    if (loaded) {
-      town = loaded;
-      displayRound = activeRound.round_index - 1;
-      townLabel =
-        activeRound.round_index === 1
-          ? "Ashfen · shared starting template"
-          : `Ashfen · entering round ${activeRound.round_index}`;
-      budget = computeBudget(town, activeRound.round_index);
-      if (activeRound.status === "scheduled") {
-        notice = "The next round has not opened yet. Plan ahead; you can submit once it opens.";
-      } else if (activeRound.status === "locked" || activeRound.status === "processing") {
-        notice = "Decisions are locked. Results are being processed.";
-      }
-    } else {
-      town = createInitialTown();
-      displayRound = 0;
-      townLabel = "Ashfen · shared starting template";
-      budget = computeBudget(town, 1);
-      notice = "The previous round is not published yet, so the live town isn't available.";
+  } else if (activeRound && loadedTown) {
+    town = loadedTown;
+    displayRound = activeRound.round_index - 1;
+    townLabel =
+      activeRound.round_index === 1
+        ? "Ashfen · shared starting template"
+        : `Ashfen · entering round ${activeRound.round_index}`;
+    budget = computeBudget(town, activeRound.round_index);
+    if (activeRound.status === "scheduled") {
+      notice = "The next round has not opened yet. Plan ahead; you can submit once it opens.";
+    } else if (activeRound.status === "locked" || activeRound.status === "processing") {
+      notice = "Decisions are locked. Results are being processed.";
     }
+  } else if (activeRound) {
+    town = createInitialTown();
+    displayRound = 0;
+    townLabel = "Ashfen · shared starting template";
+    budget = computeBudget(town, 1);
+    notice = "The previous round is not published yet, so the live town isn't available.";
   } else {
     town = createInitialTown();
     displayRound = 0;
@@ -323,40 +350,29 @@ export async function loadGameContext(): Promise<GameContext> {
     notice = "No rounds have been scheduled yet.";
   }
 
-  // Own accepted submission for the open round (so staged choices persist on reload).
   let submission: GameContext["submission"] = null;
-  if (openRound) {
-    const { data: sub } = await admin
-      .from("submissions")
-      .select("allocations, project_starts, status")
-      .eq("round_id", openRound.id)
-      .eq("team_id", team.id)
-      .eq("status", "accepted")
-      .maybeSingle();
-    if (sub) {
-      const s = sub as { allocations: Record<string, number>; project_starts: string[]; status: string };
-      submission = {
-        allocations: s.allocations ?? {},
-        projectStarts: s.project_starts ?? [],
-        status: s.status,
-      };
-    }
+  if (subRow?.data) {
+    const s = subRow.data as {
+      allocations: Record<string, number>;
+      project_starts: string[];
+      status: string;
+    };
+    submission = {
+      allocations: s.allocations ?? {},
+      projectStarts: s.project_starts ?? [],
+      status: s.status,
+    };
   }
 
   const ownHistory = ownHistoryFrom(publishedRows, team.seat);
 
   const serverNow = new Date().toISOString();
 
-  return {
+  return publicPlayContext({
     mode: "live",
     configured,
     signedIn: true,
-    // Never expose Auth system emails to the client; show Team ID / seat label.
-    email: publicPlayerLabel({
-      loginId: team.login_id,
-      teamName: team.name,
-      seat: team.seat,
-    }),
+    email: null,
     isOrganiser,
     team: { id: team.id, name: team.name, seat: team.seat, loginId: team.login_id },
     competition,
@@ -373,40 +389,95 @@ export async function loadGameContext(): Promise<GameContext> {
     publishedRounds: publishedIndexes,
     roundSummaries,
     notice,
-  };
+  });
 }
 
-/** Pre-round town for a team: the template for round 1, else the last published state. */
-async function loadPreTown(
+/**
+ * Unseated staff (organiser) still receive published TownPublic boards.
+ * They do not receive a team seat, private town_states, or submissions.
+ */
+async function loadStaffPlayContext(
   admin: ReturnType<typeof createServiceRoleClient>,
-  competitionId: string,
-  teamId: string,
-  roundIndex: number,
-): Promise<Town | null> {
-  if (roundIndex <= 1) {
-    const { data } = await admin
-      .from("town_templates")
-      .select("initial_state")
-      .eq("competition_id", competitionId)
-      .maybeSingle();
-    if (!data) return null;
-    return parseTown((data as { initial_state: unknown }).initial_state);
-  }
+  args: { configured: boolean; competitionId: string; isOrganiser: boolean },
+): Promise<GameContext> {
+  const [{ data: competitionRow }, { data: roundRows }] = await Promise.all([
+    admin
+      .from("competitions")
+      .select("id, title, round_count")
+      .eq("id", args.competitionId)
+      .maybeSingle(),
+    admin
+      .from("rounds")
+      .select("id, round_index, status, opens_at, closes_at, event_code")
+      .eq("competition_id", args.competitionId)
+      .order("round_index"),
+  ]);
 
-  const { data: prevRound } = await admin
-    .from("rounds")
-    .select("id, status")
-    .eq("competition_id", competitionId)
-    .eq("round_index", roundIndex - 1)
-    .maybeSingle();
-  if (!prevRound || (prevRound as { status: string }).status !== "published") return null;
+  const rounds = ((roundRows as RoundRow[] | null) ?? []).slice();
+  const roundSummaries = roundSummariesFrom(rounds);
+  const publishedIds = rounds.filter((row) => row.status === "published").map((row) => row.id);
+  const [roster, publishedRows] = await Promise.all([
+    loadCompetitionRoster(admin, args.competitionId),
+    loadPublishedResultRows(admin, publishedIds),
+  ]);
+  const { boardByRound, publishedRounds, publishedRoundIndex, leaderboard } = buildBoards({
+    roundSummaries,
+    teams: roster,
+    results: publishedRows,
+    viewerSeat: null,
+  });
 
-  const { data: prevState } = await admin
-    .from("town_states")
-    .select("state")
-    .eq("team_id", teamId)
-    .eq("round_id", (prevRound as { id: string }).id)
-    .maybeSingle();
-  if (!prevState) return null;
-  return parseTown((prevState as { state: unknown }).state);
+  const openRound = rounds.find((r) => r.status === "open");
+  const inFlight = rounds.find((r) => r.status === "locked" || r.status === "processing");
+  const scheduled = rounds.find((r) => r.status === "scheduled");
+  const lastPublished = rounds.filter((r) => r.status === "published").at(-1) ?? null;
+  const activeRound = openRound ?? inFlight ?? scheduled ?? lastPublished ?? null;
+
+  const town = createInitialTown();
+  const serverNow = new Date().toISOString();
+  const notice =
+    publishedRounds.length > 0
+      ? "Staff accounts are not seated on a team. Official standings use published scores. Open the control room to run the competition."
+      : args.isOrganiser
+        ? "Staff accounts are not seated on a team. Open the control room to run the competition. No round has been published yet."
+        : "Your account is signed in but not seated on a team yet. Once your team is assigned, reload.";
+
+  return publicPlayContext({
+    mode: "preview",
+    configured: args.configured,
+    signedIn: true,
+    email: null,
+    isOrganiser: args.isOrganiser,
+    team: null,
+    competition: competitionRow
+      ? {
+          id: (competitionRow as { id: string }).id,
+          title: (competitionRow as { title: string }).title,
+          roundCount: (competitionRow as { round_count: number }).round_count,
+        }
+      : { id: args.competitionId, title: "Langlands R3", roundCount: 6 },
+    round: activeRound
+      ? toRoundInfo(activeRound, serverNow)
+      : {
+          id: null,
+          index: 1,
+          status: "none",
+          opensAt: null,
+          closesAt: null,
+          eventCode: (PACK_A[1] as EventCode | null) ?? null,
+          serverNow,
+        },
+    town: townToView(town, "Ashfen · shared starting template", 0),
+    budget: computeBudget(town, 1),
+    startedCodes: [],
+    completedCodes: [],
+    submission: null,
+    leaderboard,
+    boardByRound,
+    ownHistory: [],
+    publishedRoundIndex,
+    publishedRounds,
+    roundSummaries,
+    notice,
+  });
 }

@@ -12,8 +12,17 @@ describe("round clock", () => {
     expect(formatCountdown(0)).toBe("0:00");
   });
 
+  it("ticks down as local time elapses after the server sample", () => {
+    const serverNow = "2026-10-17T12:00:00.000Z";
+    const closesAt = "2026-10-17T12:18:00.000Z";
+    const sampledAt = Date.parse("2026-10-17T15:00:00.000Z");
+    const later = sampledAt + 5_000;
+    expect(remainingMs(closesAt, serverNow, later, sampledAt)).toBe(18 * 60 * 1000 - 5_000);
+    expect(formatCountdown(18 * 60 * 1000 - 5_000)).toBe("17:55");
+  });
+
   it("labels round states honestly", () => {
-    expect(clockLabel({ status: "open", opensAt: null, remainingMs: 90_000 })).toBe("1:30");
+    expect(clockLabel({ status: "open", opensAt: null, remainingMs: 90_000 })).toBe("1:30 left");
     expect(clockLabel({ status: "open", opensAt: null, remainingMs: 0 })).toBe("Deadline passed");
     expect(clockLabel({ status: "locked", opensAt: null, remainingMs: null })).toBe("Locked");
     expect(clockLabel({ status: "processing", opensAt: null, remainingMs: null })).toBe("Locked");

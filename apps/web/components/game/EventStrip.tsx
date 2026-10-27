@@ -37,7 +37,7 @@ export function EventStrip({
       </span>
       <span className="min-w-0 flex-1 truncate text-[0.78rem] text-[#D7CFB8]">{brief.tagline}</span>
       <span className="shrink-0 text-[0.62rem] uppercase tracking-[0.12em] text-[#8A8674]">
-        Briefing
+        This round
       </span>
     </button>
   );

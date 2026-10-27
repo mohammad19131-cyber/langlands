@@ -3,8 +3,7 @@
 import { CATALOGUE, SECTORS, type Sector } from "@langlands/sim/public";
 import { INDICATORS, healthBand, healthValue } from "../../lib/ashfen";
 import { budgetCheck, sumAllocations } from "../../lib/decision";
-import { SECTOR_LABELS } from "../../lib/format";
-import { CATEGORIES, MAX_STARTS_PER_ROUND, type GameContext } from "../../lib/game-types";
+import { CATEGORIES, MAX_STARTS_PER_ROUND, playerSector, type GameContext } from "../../lib/game-types";
 import { projectsForSector, startEligibility, summariseEffects } from "./game-logic";
 import { SECTOR_ACCENT } from "./ActionBar";
 import { ResultsPanel } from "./ResultsPanel";
@@ -30,6 +29,7 @@ export function CommandDesk({
   onSpread,
   onClear,
   onClose,
+  focusSector = null,
 }: {
   ctx: GameContext;
   tab: DeskTab;
@@ -42,6 +42,7 @@ export function CommandDesk({
   onSpread: () => void;
   onClear: () => void;
   onClose: () => void;
+  focusSector?: Sector | null;
 }) {
   const check = budgetCheck(
     { allocations, projectStarts: stagedStarts },
@@ -49,7 +50,7 @@ export function CommandDesk({
   );
 
   return (
-    <aside className="pointer-events-auto relative z-20 flex h-full w-[26.5rem] shrink-0 flex-col border-l border-[#B89A60]/25 bg-[#0F1613]/97 backdrop-blur">
+    <aside className="pointer-events-auto relative z-20 flex h-full w-full shrink-0 flex-col border-[#B89A60]/25 bg-[#0F1613]/97 backdrop-blur max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[min(62%,34rem)] max-md:border-t md:w-[26.5rem] md:border-l">
       <div className="flex items-center justify-between border-b border-[#B89A60]/15 px-4 py-2.5">
         <p className="text-[0.72rem] uppercase tracking-[0.16em] text-[#E3DCC8]">Command desk</p>
         <button
@@ -109,6 +110,7 @@ export function CommandDesk({
             locked={locked}
             stagedStarts={stagedStarts}
             onToggleStart={onToggleStart}
+            focusSector={focusSector}
           />
         ) : null}
         {tab === "town" ? <TownTab ctx={ctx} /> : null}
@@ -148,9 +150,9 @@ function BudgetTab({
   const allocated = sumAllocations(allocations);
   return (
     <div className="space-y-4 p-4">
-      <p className="text-[0.68rem] leading-5 text-[#8A8674]">
-        Available credits are computed on the server from reserve, income and maintenance. Your
-        totals are a proposal, not cash on hand.
+      <p className="text-[0.68rem] leading-5 text-[#9A947F]">
+        Available credits come from the server: reserve plus income, minus maintenance. Numbers in
+        this desk are a proposal until saved.
       </p>
       <dl className="grid grid-cols-2 gap-2 text-[0.78rem]">
         <Ledger label="Available" value={`${Math.round(ctx.budget.available)} cr`} accent="#D9B15A" />
@@ -192,7 +194,7 @@ function BudgetTab({
             <div key={sector} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 shrink-0" style={{ backgroundColor: SECTOR_ACCENT[sector] }} />
               <label className="w-[7.5rem] shrink-0 text-[0.72rem] text-[#B7B19D]" htmlFor={`alloc-${sector}`}>
-                {SECTOR_LABELS[sector]}
+                {playerSector(sector).short}
               </label>
               <button
                 type="button"
@@ -208,11 +210,11 @@ function BudgetTab({
                 min={0}
                 value={value}
                 disabled={locked}
-                aria-label={`${SECTOR_LABELS[sector]} allocation`}
+                aria-label={`${playerSector(sector).label} allocation`}
                 onChange={(event) =>
                   onAllocate(sector, Math.max(0, Math.round(Number(event.target.value) || 0)))
                 }
-                className="h-6 w-16 border border-white/10 bg-black/30 px-1.5 text-right text-[0.72rem] tabular-nums text-[#E3DCC8] focus:border-[#D9B15A] focus:outline-none"
+                className="h-6 w-16 border border-white/10 bg-black/30 px-1.5 text-right text-[0.72rem] tabular-nums text-[#E3DCC8] focus:border-[#D9B15A]"
               />
               <button
                 type="button"
@@ -260,29 +262,45 @@ function CatalogueTab({
   locked,
   stagedStarts,
   onToggleStart,
+  focusSector,
 }: {
   ctx: GameContext;
   locked: boolean;
   stagedStarts: string[];
   onToggleStart: (code: string) => void;
+  focusSector: Sector | null;
 }) {
   const full = stagedStarts.length >= MAX_STARTS_PER_ROUND;
+  const categories = focusSector
+    ? [
+        ...CATEGORIES.filter((category) => category.sector === focusSector),
+        ...CATEGORIES.filter((category) => category.sector !== focusSector),
+      ]
+    : CATEGORIES;
   return (
     <div className="space-y-4 p-4">
-      <p className="text-[0.68rem] leading-5 text-[#8A8674]">
-        Fifteen catalogue interventions. At most {MAX_STARTS_PER_ROUND} starts this round.
-        Prerequisites and mutexes are checked against your published town; the server confirms.
+      <p className="text-[0.68rem] leading-5 text-[#9A947F]">
+        Fifteen interventions. At most {MAX_STARTS_PER_ROUND} starts this round. Chosen projects are
+        marked. Unavailable starts show why. The server confirms the final plan.
       </p>
       <p className="text-[0.7rem] text-[#D7CFB8]">
-        {stagedStarts.length}/{MAX_STARTS_PER_ROUND} starts selected
+        {stagedStarts.length}/{MAX_STARTS_PER_ROUND} chosen · {Math.round(ctx.budget.available)} cr
+        available
       </p>
-      {CATEGORIES.map((category) => {
+      {categories.map((category) => {
         const projects = projectsForSector(category.sector);
         return (
           <section key={category.sector}>
-            <h3 className="mb-2 flex items-center gap-2 text-[0.66rem] uppercase tracking-[0.12em] text-[#E3DCC8]">
+            <h3
+              className={`mb-2 flex items-center gap-2 text-[0.66rem] uppercase tracking-[0.12em] ${
+                focusSector === category.sector ? "text-[#D9B15A]" : "text-[#E3DCC8]"
+              }`}
+            >
               <span className="h-2.5 w-2.5" style={{ backgroundColor: SECTOR_ACCENT[category.sector] }} />
               {category.label}
+              {focusSector === category.sector ? (
+                <span className="normal-case tracking-normal text-[#9A947F]"> · map focus</span>
+              ) : null}
             </h3>
             <div className="space-y-2">
               {projects.map((project) => {
@@ -308,10 +326,10 @@ function CatalogueTab({
                           {project.name}
                         </p>
                         <p className="mt-0.5 text-[0.64rem] uppercase tracking-[0.1em] text-[#8A8674]">
-                          {project.code} · {project.cost} cr ·{" "}
+                          {project.cost} cr of {Math.round(ctx.budget.available)} available ·{" "}
                           {project.buildRounds === 0 ? "instant" : `${project.buildRounds}-round build`}{" "}
                           · upkeep {project.maintenance}
-                          {project.mutexGroup ? ` · mutex ${project.mutexGroup}` : ""}
+                          {staged ? " · chosen" : ""}
                         </p>
                       </div>
                       <button

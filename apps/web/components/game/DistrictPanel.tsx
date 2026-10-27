@@ -3,10 +3,9 @@
 import type { Sector } from "@langlands/sim/public";
 import type { TownView, IndicatorKey } from "../../lib/ashfen";
 import { INDICATORS, healthBand, healthValue } from "../../lib/ashfen";
-import { SECTOR_LABELS } from "../../lib/format";
 import { DISTRICTS, districtSignal, type DistrictId } from "../map/town-geometry";
 import { sectorsForDistrict } from "./sectors";
-import { CATEGORIES } from "../../lib/game-types";
+import { playerSector } from "../../lib/game-types";
 
 const BAND_COLOR: Record<string, string> = {
   critical: "#C0533E",
@@ -89,15 +88,16 @@ export function DistrictPanel({
             <p className="text-[0.58rem] uppercase tracking-[0.14em] text-[#8A8674]">Work concentrated here</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {sectors.map((s) => {
-                const cat = CATEGORIES.find((c) => c.sector === s);
+                const cat = playerSector(s);
                 return (
                   <button
                     key={s}
                     type="button"
                     onClick={() => onPickSector(s)}
+                    aria-label={cat.label}
                     className="border border-[#B89A60]/30 px-2 py-1 text-[0.7rem] text-[#D7CFB8] transition-colors hover:border-[#D9B15A] hover:bg-[#D9B15A]/10"
                   >
-                    {cat?.short ?? SECTOR_LABELS[s]}
+                    {cat.short}
                   </button>
                 );
               })}

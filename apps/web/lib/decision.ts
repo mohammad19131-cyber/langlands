@@ -104,3 +104,54 @@ export function saveKind(args: {
   if (args.dirty) return "draft";
   return args.accepted ? "accepted" : "draft";
 }
+
+/** Primary save control. Never says “saved” until a server-accepted row exists. */
+export function saveButtonLabel(args: {
+  saving: boolean;
+  live: boolean;
+  roundOpen: boolean;
+  dirty: boolean;
+  serverAccepted: boolean;
+}): string {
+  if (args.saving) return "Saving…";
+  if (!args.live) return "Preview only";
+  if (!args.roundOpen) return args.serverAccepted ? "Saved on server" : "Not saved";
+  if (args.dirty || !args.serverAccepted) return "Save to server";
+  return "Saved on server";
+}
+
+export function saveStatusLabel(args: {
+  saving: boolean;
+  live: boolean;
+  roundStatus: string;
+  dirty: boolean;
+  serverAccepted: boolean;
+}): string {
+  if (args.saving) return "Saving to server…";
+  if (!args.live) return "Preview — not submitted";
+  if (args.roundStatus === "scheduled") return "Round not open · no save";
+  if (args.roundStatus !== "open") {
+    return args.serverAccepted ? "Saved on server" : "Round closed · no save";
+  }
+  if (args.dirty) return "Unsaved draft";
+  return args.serverAccepted ? "Saved on server" : "No server save yet";
+}
+
+/** Empty start chips describe this round's staging, not a previous published decision. */
+export function emptyStartsCopy(roundStatus: string): string {
+  if (roundStatus === "scheduled") {
+    return "No starts staged for this round · up to 2 when it opens";
+  }
+  if (roundStatus === "open") return "No projects chosen · up to 2 starts";
+  return "No starts staged for this round";
+}
+
+/** Engine default when the round locks with no accepted submission. */
+export function silentHoldNotice(args: {
+  live: boolean;
+  roundOpen: boolean;
+  serverAccepted: boolean;
+}): string | null {
+  if (!args.live || !args.roundOpen || args.serverAccepted) return null;
+  return "No server save yet. If the round locks this way, the town starts nothing, spends nothing, and holds remaining credits as reserve.";
+}

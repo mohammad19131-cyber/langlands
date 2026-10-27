@@ -9,7 +9,11 @@ import {
   fullAllocations,
   idempotencyKeyFor,
   projectCost,
+  emptyStartsCopy,
+  saveButtonLabel,
   saveKind,
+  saveStatusLabel,
+  silentHoldNotice,
   sumAllocations,
 } from "./decision";
 import { startEligibility } from "../components/game/game-logic";
@@ -71,6 +75,52 @@ describe("decision payload", () => {
     expect(saveKind({ live: true, roundStatus: "locked", dirty: true, accepted: true })).toBe("accepted");
     expect(saveKind({ live: true, roundStatus: "locked", dirty: false, accepted: false })).toBe("closed");
     expect(saveKind({ live: false, roundStatus: "open", dirty: true, accepted: false })).toBe("preview");
+  });
+
+  it("never labels the save button as saved without a server-accepted row", () => {
+    expect(
+      saveButtonLabel({ saving: false, live: true, roundOpen: true, dirty: false, serverAccepted: false }),
+    ).toBe("Save to server");
+    expect(
+      saveButtonLabel({ saving: false, live: true, roundOpen: true, dirty: false, serverAccepted: true }),
+    ).toBe("Saved on server");
+    expect(
+      saveButtonLabel({ saving: true, live: true, roundOpen: true, dirty: true, serverAccepted: false }),
+    ).toBe("Saving…");
+    expect(
+      saveButtonLabel({ saving: false, live: false, roundOpen: true, dirty: true, serverAccepted: false }),
+    ).toBe("Preview only");
+  });
+
+  it("does not call a scheduled round closed, and keeps empty staging as this round", () => {
+    expect(
+      saveStatusLabel({
+        saving: false,
+        live: true,
+        roundStatus: "scheduled",
+        dirty: false,
+        serverAccepted: false,
+      }),
+    ).toBe("Round not open · no save");
+    expect(
+      saveStatusLabel({
+        saving: false,
+        live: true,
+        roundStatus: "locked",
+        dirty: false,
+        serverAccepted: false,
+      }),
+    ).toBe("Round closed · no save");
+    expect(emptyStartsCopy("scheduled")).toBe("No starts staged for this round · up to 2 when it opens");
+    expect(emptyStartsCopy("scheduled")).not.toMatch(/No projects chosen/);
+    expect(emptyStartsCopy("open")).toBe("No projects chosen · up to 2 starts");
+    expect(emptyStartsCopy("published")).toBe("No starts staged for this round");
+  });
+
+  it("explains the engine hold when the live round has no accepted save", () => {
+    expect(silentHoldNotice({ live: true, roundOpen: true, serverAccepted: false })).toMatch(/holds remaining credits/);
+    expect(silentHoldNotice({ live: true, roundOpen: true, serverAccepted: true })).toBeNull();
+    expect(silentHoldNotice({ live: false, roundOpen: true, serverAccepted: false })).toBeNull();
   });
 
   it("keeps at most two catalogue starts and drops unknown codes", () => {

@@ -1,5 +1,5 @@
 import "server-only";
-import { boardForRound, type BoardSeat, type PublishedResultInput, type TeamSeatInput } from "../ranking";
+import { playStandingsFrom, type BoardSeat, type TeamSeatInput } from "../ranking";
 import { parseBreakdown } from "../score-display";
 import type { OwnPublishedRound, RoundPhase, RoundSummary } from "../game-types";
 import { createServiceRoleClient } from "../supabase/admin";
@@ -95,40 +95,25 @@ export function buildBoards(args: {
   teams: TeamSeatInput[];
   results: PublishedRow[];
   viewerSeat?: number | null;
-}): { boardByRound: Record<number, BoardSeat[]>; publishedRounds: number[] } {
-  const publishedRounds = args.roundSummaries
-    .filter((row) => row.status === "published")
-    .map((row) => row.index);
-  const byRound = new Map<number, PublishedResultInput[]>();
-  for (const row of args.results) {
-    const list = byRound.get(row.round_index) ?? [];
-    list.push({
+}): {
+  boardByRound: Record<number, BoardSeat[]>;
+  publishedRounds: number[];
+  publishedRoundIndex: number | null;
+  leaderboard: BoardSeat[] | null;
+} {
+  return playStandingsFrom({
+    roundSummaries: args.roundSummaries,
+    teams: args.teams,
+    viewerSeat: args.viewerSeat,
+    results: args.results.map((row) => ({
+      roundIndex: Number(row.round_index),
       seat: Number(row.team_seat),
       name: String(row.team_name),
       snapshot: Number(row.snapshot_score),
       final: row.final_score == null ? null : Number(row.final_score),
       breakdown: row.score_breakdown,
-    });
-    byRound.set(row.round_index, list);
-  }
-
-  const boardByRound: Record<number, BoardSeat[]> = {};
-  let previous: BoardSeat[] | null = null;
-  for (const index of publishedRounds) {
-    const summary = args.roundSummaries.find((row) => row.index === index);
-    const built = boardForRound({
-      roundStatus: summary?.status ?? "published",
-      teams: args.teams,
-      results: byRound.get(index) ?? [],
-      viewerSeat: args.viewerSeat,
-      previous,
-    });
-    if (built.ok) {
-      boardByRound[index] = built.seats;
-      previous = built.seats;
-    }
-  }
-  return { boardByRound, publishedRounds };
+    })),
+  });
 }
 
 export function ownHistoryFrom(rows: PublishedRow[], teamSeat: number): OwnPublishedRound[] {

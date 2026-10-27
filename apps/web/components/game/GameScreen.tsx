@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { SECTORS, type Sector } from "@langlands/sim/public";
 import { remainingMs } from "../../lib/clock";
 import {
@@ -11,10 +10,12 @@ import {
   fullAllocations,
   idempotencyKeyFor,
   projectCost,
-  saveKind,
+  saveStatusLabel,
+  silentHoldNotice,
   type DecisionPayload,
 } from "../../lib/decision";
 import type { GameContext, RoundPhase } from "../../lib/game-types";
+import { submissionClosedMessage } from "../../lib/submission-closed";
 import { districtsForSector } from "./sectors";
 import type { DistrictId } from "../map/town-geometry";
 import { startEligibility } from "./game-logic";
@@ -38,15 +39,18 @@ type OverlayKind = "standings" | "scoring" | "event" | "review" | null;
 export function GameScreen({
   ctx,
   initialTab = "decide",
-  deskOpen: deskStart = true,
+  deskOpen: deskStart = false,
   initialOverlay = null,
+  onRoundStatusChange,
 }: {
   ctx: GameContext;
   initialTab?: DeskTab;
   deskOpen?: boolean;
   initialOverlay?: OverlayKind;
+  onRoundStatusChange?: (status: RoundPhase) => void;
 }) {
-  const router = useRouter();
+  const onRoundStatusChangeRef = useRef(onRoundStatusChange);
+  onRoundStatusChangeRef.current = onRoundStatusChange;
   const [hovered, setHovered] = useState<DistrictId | null>(null);
   const [selected, setSelected] = useState<DistrictId | null>(null);
   const [openCategory, setOpenCategory] = useState<Sector | null>(null);
@@ -55,6 +59,7 @@ export function GameScreen({
   const [overlay, setOverlay] = useState<OverlayKind>(initialOverlay);
   const [submit, setSubmit] = useState<SubmitState>({ status: "idle", message: null });
   const [serverNow, setServerNow] = useState(ctx.round?.serverNow ?? new Date().toISOString());
+  const [sampledAt, setSampledAt] = useState(() => Date.now());
   const [roundStatus, setRoundStatus] = useState(ctx.round?.status ?? "none");
   const [tick, setTick] = useState(0);
   const savingRef = useRef(false);
@@ -76,7 +81,7 @@ export function GameScreen({
   );
   const dirty = !decisionsEqual(payload, accepted);
   const check = budgetCheck(payload, ctx.budget.available);
-  const remaining = remainingMs(ctx.round?.closesAt ?? null, serverNow, Date.now() + tick * 0);
+  const remaining = remainingMs(ctx.round?.closesAt ?? null, serverNow, Date.now() + tick * 0, sampledAt);
   const expired = roundStatus === "open" && remaining != null && remaining <= 0;
   const planningAllowed = ctx.mode === "preview" || roundStatus === "open";
   const deadlinePassed =
@@ -91,25 +96,19 @@ export function GameScreen({
     !!ctx.round?.id &&
     !!ctx.team &&
     !deadlinePassed;
-  const kind = saveKind({
+  const serverAccepted = Boolean(ctx.submission) || submit.status === "success";
+  const saveLabel = saveStatusLabel({
+    saving: submit.status === "submitting",
     live: ctx.mode === "live",
     roundStatus,
     dirty,
-    accepted: !dirty && (Boolean(ctx.submission) || submit.status === "success"),
+    serverAccepted,
   });
-
-  const saveLabel =
-    submit.status === "submitting"
-      ? "Saving to server…"
-      : kind === "preview"
-        ? "Preview — not submitted"
-        : kind === "closed"
-          ? "Round closed"
-          : dirty
-            ? "Unsaved draft"
-            : ctx.submission
-              ? "Saved on server"
-              : "No server save yet";
+  const holdNotice = silentHoldNotice({
+    live: ctx.mode === "live",
+    roundOpen: roundStatus === "open" && !deadlinePassed,
+    serverAccepted,
+  });
 
   const targets = useMemo<DistrictId[]>(
     () => (openCategory ? districtsForSector(openCategory) : []),
@@ -149,9 +148,12 @@ export function GameScreen({
       };
       if (
         data?.error === "closed" ||
-        (res.status === 403 && /deadline|closed/i.test(data?.message ?? data?.error ?? ""))
+        (res.status === 403 && /deadline|closed|not open/i.test(data?.message ?? data?.error ?? ""))
       ) {
-        setSubmit({ status: "closed", message: "Deadline passed. Waiting for results." });
+        setSubmit({
+          status: "closed",
+          message: data?.message?.trim() || submissionClosedMessage(roundStatus),
+        });
         return;
       }
       if (!res.ok || data?.ok === false) {
@@ -180,7 +182,7 @@ export function GameScreen({
     } finally {
       savingRef.current = false;
     }
-  }, [canSubmit, check.projectsExceedAvailable, ctx.round?.id, payload]);
+  }, [canSubmit, check.projectsExceedAvailable, ctx.round?.id, payload, roundStatus]);
 
   useEffect(() => {
     if (!canSubmit || !dirty || check.projectsExceedAvailable) return;
@@ -192,7 +194,10 @@ export function GameScreen({
 
   useEffect(() => {
     setRoundStatus(ctx.round?.status ?? "none");
-    if (ctx.round?.serverNow) setServerNow(ctx.round.serverNow);
+    if (ctx.round?.serverNow) {
+      setServerNow(ctx.round.serverNow);
+      setSampledAt(Date.now());
+    }
   }, [ctx.round?.status, ctx.round?.serverNow]);
 
   useEffect(() => {
@@ -212,10 +217,13 @@ export function GameScreen({
           serverNow?: string;
           status?: RoundPhase;
         };
-        if (data.serverNow) setServerNow(data.serverNow);
+        if (data.serverNow) {
+          setServerNow(data.serverNow);
+          setSampledAt(Date.now());
+        }
         if (data.status) {
           setRoundStatus(data.status);
-          if (data.status !== previous) router.refresh();
+          if (data.status !== previous) onRoundStatusChangeRef.current?.(data.status);
         }
       } catch {
         /* keep last good clock */
@@ -223,7 +231,7 @@ export function GameScreen({
     };
     const id = window.setInterval(poll, 5000);
     return () => window.clearInterval(id);
-  }, [ctx.mode, ctx.round?.status, router]);
+  }, [ctx.mode, ctx.round?.status]);
 
   function toggleStart(code: string) {
     setSubmit({ status: "idle", message: null });
@@ -325,7 +333,7 @@ export function GameScreen({
           {roundStatus === "void" ? (
             <WaitOverlay
               title="Round voided"
-              body={ctx.notice ?? "This round was voided. Wait for the organiser’s next instruction."}
+              body={ctx.notice ?? "This round was voided. Wait for the next round to open."}
             />
           ) : null}
         </div>
@@ -342,6 +350,7 @@ export function GameScreen({
             onSpread={spreadEvenly}
             onClear={() => setAllocations(emptyAllocations())}
             onClose={() => setDeskOpen(false)}
+            focusSector={openCategory}
           />
         ) : null}
       </main>
@@ -353,8 +362,22 @@ export function GameScreen({
         saving={submit.status === "submitting"}
         saveLabel={saveLabel}
         dirty={dirty}
+        serverAccepted={serverAccepted}
+        submitMessage={submit.message}
+        submitTone={
+          submit.status === "error" || submit.status === "closed"
+            ? submit.status
+            : submit.status === "success"
+              ? "success"
+              : "idle"
+        }
+        holdNotice={holdNotice}
         openCategory={openCategory}
-        onToggleCategory={(sector) => setOpenCategory((cur) => (cur === sector ? null : sector))}
+        onToggleCategory={(sector) => {
+          setOpenCategory((cur) => (cur === sector ? null : sector));
+          setDeskOpen(true);
+          setDeskTab("catalogue");
+        }}
         stagedStarts={stagedStarts}
         onToggleStart={toggleStart}
         allocations={allocations}

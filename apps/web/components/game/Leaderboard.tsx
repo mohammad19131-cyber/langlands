@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { BoardSeat, GameContext } from "../../lib/game-types";
-import { selectPublishedRound } from "../../lib/ranking";
+import { hasPublishedStandings, selectPublishedRound, UNPUBLISHED_STANDINGS_COPY } from "../../lib/ranking";
 import {
   formatScore,
   PILLAR_KEYS,
@@ -37,14 +37,11 @@ export function Leaderboard({
     return null;
   }, [ctx.notice, ctx.round, ctx.roundSummaries]);
 
-  if (published.length === 0) {
+  if (!hasPublishedStandings(published)) {
     return (
       <div className="space-y-3">
         {statusLine ? <p className="text-[0.8rem] leading-6 text-[#D7CFB8]">{statusLine}</p> : null}
-        <p className="text-[0.84rem] leading-6 text-[#A9A491]">
-          No round has been published yet. Official standings appear here once the organiser
-          publishes results for all 20 towns. Missing is not a score of zero.
-        </p>
+        <p className="text-[0.84rem] leading-6 text-[#A9A491]">{UNPUBLISHED_STANDINGS_COPY}</p>
       </div>
     );
   }

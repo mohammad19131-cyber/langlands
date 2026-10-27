@@ -145,6 +145,76 @@ export function selectPublishedRound(
   return published.at(-1) ?? null;
 }
 
+export const UNPUBLISHED_STANDINGS_COPY =
+  "No round has been published yet. Official standings appear here once results are published for all 20 towns. Missing is not a score of zero.";
+
+export function hasPublishedStandings(publishedRounds: readonly number[]): boolean {
+  return publishedRounds.length > 0;
+}
+
+export type PlayStandingResult = PublishedResultInput & { roundIndex: number };
+
+/**
+ * Official standings for a seated player or unseated staff viewer.
+ * Only `published` round summaries are included. Viewer seat is optional;
+ * staff have none and must not be marked as a team.
+ */
+export function playStandingsFrom(args: {
+  roundSummaries: Array<{ index: number; status: string }>;
+  teams: TeamSeatInput[];
+  results: PlayStandingResult[];
+  viewerSeat?: number | null;
+}): {
+  publishedRounds: number[];
+  boardByRound: Record<number, BoardSeat[]>;
+  publishedRoundIndex: number | null;
+  leaderboard: BoardSeat[] | null;
+} {
+  const publishedRounds = args.roundSummaries
+    .filter((row) => row.status === "published")
+    .map((row) => row.index)
+    .filter((index, i, all) => all.indexOf(index) === i)
+    .sort((a, b) => a - b);
+
+  const byRound = new Map<number, PublishedResultInput[]>();
+  for (const row of args.results) {
+    if (!publishedRounds.includes(row.roundIndex)) continue;
+    const list = byRound.get(row.roundIndex) ?? [];
+    list.push({
+      seat: row.seat,
+      name: row.name,
+      snapshot: row.snapshot,
+      final: row.final,
+      breakdown: row.breakdown,
+    });
+    byRound.set(row.roundIndex, list);
+  }
+
+  const boardByRound: Record<number, BoardSeat[]> = {};
+  let previous: BoardSeat[] | null = null;
+  for (const index of publishedRounds) {
+    const built = boardForRound({
+      roundStatus: "published",
+      teams: args.teams,
+      results: byRound.get(index) ?? [],
+      viewerSeat: args.viewerSeat,
+      previous,
+    });
+    if (built.ok) {
+      boardByRound[index] = built.seats;
+      previous = built.seats;
+    }
+  }
+
+  const publishedRoundIndex = publishedRounds.at(-1) ?? null;
+  return {
+    publishedRounds,
+    boardByRound,
+    publishedRoundIndex,
+    leaderboard: publishedRoundIndex != null ? (boardByRound[publishedRoundIndex] ?? null) : null,
+  };
+}
+
 export function publicBoardPayload(seats: BoardSeat[]): Array<Record<string, unknown>> {
   return seats.map((seat) => {
     const out: Record<string, unknown> = {};

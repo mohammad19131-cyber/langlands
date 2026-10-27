@@ -3,9 +3,12 @@ import {
   assertNoPrivateBoardFields,
   boardForRound,
   compareOfficial,
+  hasPublishedStandings,
+  playStandingsFrom,
   publicBoardPayload,
   selectPublishedRound,
   TEAM_SEATS,
+  UNPUBLISHED_STANDINGS_COPY,
 } from "./ranking";
 import { formatDelta, formatScore, parseBreakdown, PILLAR_WEIGHT_PCT, rankingScore } from "./score-display";
 
@@ -187,6 +190,103 @@ describe("publication gating and ranking", () => {
     expect(second.seats.find((row) => row.seat === 1)?.rank).toBe(1);
     expect(second.seats.find((row) => row.seat === 1)?.rankDelta).toBe(1);
     expect(second.seats.find((row) => row.seat === 2)?.rankDelta).toBe(-1);
+  });
+});
+
+describe("staff and player published standings", () => {
+  const summaries = [
+    { index: 1, status: "published" },
+    { index: 2, status: "scheduled" },
+    { index: 3, status: "scheduled" },
+    { index: 4, status: "scheduled" },
+    { index: 5, status: "scheduled" },
+    { index: 6, status: "scheduled" },
+  ];
+
+  const twentyResults = TEAM_SEATS.map((seat) => ({
+    roundIndex: 1,
+    seat,
+    name: `Seat ${String(seat).padStart(2, "0")}`,
+    snapshot: seat === 1 ? 37.38 : 35.99,
+    final: seat === 1 ? 37.38 : 35.99,
+    breakdown: breakdown(seat === 1 ? 32.5 : 31.3, seat === 1 ? 37.38 : 35.99),
+  }));
+
+  it("includes a published round for staff with no viewer seat", () => {
+    const standings = playStandingsFrom({
+      roundSummaries: summaries,
+      teams: teams(),
+      results: twentyResults,
+      viewerSeat: null,
+    });
+    expect(standings.publishedRounds).toEqual([1]);
+    expect(standings.publishedRoundIndex).toBe(1);
+    expect(standings.leaderboard).toHaveLength(20);
+    expect(standings.leaderboard?.every((row) => row.isYou === false)).toBe(true);
+    expect(standings.leaderboard?.find((row) => row.seat === 1)?.rank).toBe(1);
+    expect(standings.leaderboard?.find((row) => row.seat === 1)?.rankingScore).toBe(37.38);
+    expect(standings.leaderboard?.find((row) => row.seat === 2)?.rank).toBe(2);
+    expect(standings.leaderboard?.find((row) => row.seat === 2)?.rankingScore).toBe(35.99);
+    expect(hasPublishedStandings(standings.publishedRounds)).toBe(true);
+    expect(JSON.stringify(publicBoardPayload(standings.leaderboard ?? []))).not.toMatch(
+      /held|submissionId|projectStarts|allocations/,
+    );
+  });
+
+  it("marks the seated player's own seat and still omits private fields", () => {
+    const standings = playStandingsFrom({
+      roundSummaries: summaries,
+      teams: teams(),
+      results: twentyResults,
+      viewerSeat: 1,
+    });
+    expect(standings.publishedRounds).toEqual([1]);
+    expect(standings.leaderboard?.find((row) => row.seat === 1)?.isYou).toBe(true);
+    expect(standings.leaderboard?.find((row) => row.seat === 2)?.isYou).toBe(false);
+    expect(assertNoPrivateBoardFields(publicBoardPayload(standings.leaderboard ?? []))).toEqual([]);
+  });
+
+  it("does not treat scheduled, open, locked, processing, or void rounds as published", () => {
+    const empty = playStandingsFrom({
+      roundSummaries: [
+        { index: 1, status: "scheduled" },
+        { index: 2, status: "open" },
+        { index: 3, status: "locked" },
+        { index: 4, status: "processing" },
+        { index: 5, status: "void" },
+        { index: 6, status: "scheduled" },
+      ],
+      teams: teams(),
+      results: twentyResults.map((row) => ({ ...row, roundIndex: 2 })),
+      viewerSeat: null,
+    });
+    expect(empty.publishedRounds).toEqual([]);
+    expect(empty.publishedRoundIndex).toBeNull();
+    expect(empty.leaderboard).toBeNull();
+    expect(empty.boardByRound).toEqual({});
+    expect(hasPublishedStandings(empty.publishedRounds)).toBe(false);
+    expect(UNPUBLISHED_STANDINGS_COPY).toMatch(/No round has been published yet/);
+  });
+
+  it("ignores result rows for unpublished round indexes", () => {
+    const standings = playStandingsFrom({
+      roundSummaries: summaries,
+      teams: teams(),
+      results: [
+        ...twentyResults,
+        {
+          roundIndex: 2,
+          seat: 1,
+          name: "Seat 01",
+          snapshot: 99,
+          final: 99,
+          breakdown: breakdown(90, 99),
+        },
+      ],
+    });
+    expect(standings.publishedRounds).toEqual([1]);
+    expect(standings.boardByRound[2]).toBeUndefined();
+    expect(standings.leaderboard?.find((row) => row.seat === 1)?.rankingScore).toBe(37.38);
   });
 });
 

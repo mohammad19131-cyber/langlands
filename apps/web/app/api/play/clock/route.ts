@@ -17,12 +17,27 @@ export async function GET() {
   if (!authed.ok) return Response.json(authed.body, { status: authed.status });
 
   const admin = createServiceRoleClient();
-  const { data: membership } = await admin
-    .from("team_members")
-    .select("team_id, teams(competition_id, disqualified)")
-    .eq("user_id", authed.user.userId)
-    .limit(1)
-    .maybeSingle();
+  type RoundRow = {
+    id: string;
+    round_index: number;
+    status: string;
+    opens_at: string | null;
+    closes_at: string | null;
+    event_code: string | null;
+    competition_id: string;
+  };
+  const [{ data: membership }, { data: roundRows }] = await Promise.all([
+    admin
+      .from("team_members")
+      .select("team_id, teams(competition_id, disqualified)")
+      .eq("user_id", authed.user.userId)
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("rounds")
+      .select("id, round_index, status, opens_at, closes_at, event_code, competition_id")
+      .order("round_index"),
+  ]);
 
   const teamRaw = (membership as { teams?: unknown } | null)?.teams as
     | { competition_id: string; disqualified: boolean }
@@ -31,21 +46,9 @@ export async function GET() {
   const team = Array.isArray(teamRaw) ? teamRaw[0] : teamRaw;
   if (!team || team.disqualified) return jsonError(403, "unauthorized");
 
-  const { data: roundRows } = await admin
-    .from("rounds")
-    .select("id, round_index, status, opens_at, closes_at, event_code")
-    .eq("competition_id", team.competition_id)
-    .order("round_index");
-
-  type RoundRow = {
-    id: string;
-    round_index: number;
-    status: string;
-    opens_at: string | null;
-    closes_at: string | null;
-    event_code: string | null;
-  };
-  const rounds = ((roundRows as RoundRow[] | null) ?? []).slice();
+  const rounds = ((roundRows as RoundRow[] | null) ?? []).filter(
+    (row) => row.competition_id === team.competition_id,
+  );
   const active =
     rounds.find((row) => row.status === "open") ??
     rounds.find((row) => row.status === "locked" || row.status === "processing") ??

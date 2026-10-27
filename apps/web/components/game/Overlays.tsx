@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import { CATALOGUE, SECTORS, type Sector } from "@langlands/sim/public";
 import { EVENT_SCHEDULE } from "../../lib/ashfen";
-import { SECTOR_LABELS, EVENT_LABELS } from "../../lib/format";
-import type { GameContext } from "../../lib/game-types";
+import { EVENT_LABELS, effectFieldLabel } from "../../lib/format";
+import { playerSector, type GameContext } from "../../lib/game-types";
 import { formatScore, PILLAR_KEYS, PILLAR_LABELS, PILLAR_WEIGHT_PCT } from "../../lib/score-display";
 import { projectCost, sumAllocations } from "./game-logic";
 import { SECTOR_ACCENT } from "./ActionBar";
@@ -82,7 +82,9 @@ export function ScoringOverlay({ ctx, onClose }: { ctx: GameContext; onClose: ()
       </p>
       {!latest?.breakdown ? (
         <p className="mb-4 text-[0.84rem] leading-6 text-[#C9C2AD]">
-          Official pillar scores are unavailable until a round is published. That is not a zero.
+          {ctx.publishedRounds.length > 0 && !ctx.team
+            ? "Staff accounts are not seated. Official pillar scores for all 20 towns are on the standings board."
+            : "Official pillar scores are unavailable until a round is published. That is not a zero."}
         </p>
       ) : (
         <p className="mb-4 text-[0.74rem] text-[#8A8674]">
@@ -142,7 +144,7 @@ export function EventOverlay({ ctx, onClose }: { ctx: GameContext; onClose: () =
           <div className="mt-2 flex flex-wrap gap-1.5">
             {brief.threatens.map((k) => (
               <span key={k} className="border border-white/10 px-2 py-0.5 text-[0.72rem] text-[#B7B19D]">
-                {k}
+                {effectFieldLabel(k)}
               </span>
             ))}
           </div>
@@ -220,7 +222,7 @@ export function ReviewModal({
                 <li key={s} className="flex items-center justify-between text-[0.82rem] text-[#E3DCC8]">
                   <span className="flex items-center gap-2">
                     <span className="h-2 w-2" style={{ backgroundColor: SECTOR_ACCENT[s] }} />
-                    {SECTOR_LABELS[s]}
+                    {playerSector(s).short}
                   </span>
                   <span className="tabular-nums text-[#8A8674]">{allocations[s]} cr</span>
                 </li>
@@ -284,7 +286,9 @@ export function ReviewModal({
               : submit.status === "success"
                 ? "Saved on server"
                 : submit.status === "closed"
-                  ? "Deadline passed"
+                  ? /not open/i.test(submit.message ?? "")
+                    ? "Not open yet"
+                    : "Deadline passed"
                   : "Confirm & save"}
           </button>
         </div>

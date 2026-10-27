@@ -8,13 +8,24 @@ export type ClockSnapshot = {
   eventCode: string | null;
 };
 
-export function remainingMs(closesAt: string | null, serverNow: string, clientNow = Date.now()): number | null {
+export const DECISION_WINDOW_MINUTES = 18;
+
+/**
+ * Remaining time on the server clock, ticking with local elapsed time since
+ * `serverNow` was sampled. `sampledAt` defaults to `clientNow` so a skewed
+ * device clock does not change the remaining window at the sample instant.
+ */
+export function remainingMs(
+  closesAt: string | null,
+  serverNow: string,
+  clientNow = Date.now(),
+  sampledAt = clientNow,
+): number | null {
   if (!closesAt) return null;
   const close = Date.parse(closesAt);
   const server = Date.parse(serverNow);
   if (Number.isNaN(close) || Number.isNaN(server)) return null;
-  const offset = clientNow - server;
-  return close - (clientNow - offset);
+  return close - server - (clientNow - sampledAt);
 }
 
 export function formatCountdown(ms: number): string {
@@ -32,7 +43,7 @@ export function clockLabel(args: {
   if (args.status === "open") {
     if (args.remainingMs == null) return "Open";
     if (args.remainingMs <= 0) return "Deadline passed";
-    return formatCountdown(args.remainingMs);
+    return `${formatCountdown(args.remainingMs)} left`;
   }
   if (args.status === "scheduled") return args.opensAt ? `Opens ${formatClockTime(args.opensAt)}` : "Scheduled";
   if (args.status === "locked" || args.status === "processing") return "Locked";

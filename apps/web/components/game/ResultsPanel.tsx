@@ -34,7 +34,7 @@ export function ResultsPanel({ ctx }: { ctx: GameContext }) {
       <div className="space-y-4 p-4">
         <RoundStatusList rounds={ctx.roundSummaries} current={ctx.round?.index ?? null} />
         <p className="text-[0.8rem] leading-6 text-[#A9A491]">
-          No official results yet. Pillar scores appear only after the organiser publishes a round.
+          No official results yet. Pillar scores appear only after a round is published.
           Empty is not a zero.
         </p>
       </div>

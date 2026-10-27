@@ -91,6 +91,7 @@ export type GameContext = {
   mode: "live" | "preview";
   configured: boolean;
   signedIn: boolean;
+  /** Public player label such as `Team 004`. Never an Auth email. */
   email: string | null;
   isOrganiser: boolean;
   team: { id: string; name: string; seat: number; loginId: string | null } | null;
@@ -133,6 +134,15 @@ export const CATEGORIES: Category[] = [
   { sector: "public_services", label: "Health & services", short: "Services" },
   { sector: "infrastructure", label: "Flood & resilience", short: "Resilience" },
 ];
+
+const CATEGORY_BY_SECTOR: Record<Sector, Category> = Object.fromEntries(
+  CATEGORIES.map((category) => [category.sector, category]),
+) as Record<Sector, Category>;
+
+/** Player-facing sector names used on the map, HUD, and decision desk. */
+export function playerSector(sector: Sector): Category {
+  return CATEGORY_BY_SECTOR[sector];
+}
 
 export const MAX_STARTS_PER_ROUND = 2;
 export const TOTAL_ROUNDS = 6;
