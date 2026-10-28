@@ -10,6 +10,7 @@ import {
   idempotencyKeyFor,
   projectCost,
   emptyStartsCopy,
+  humanizeSubmitError,
   saveButtonLabel,
   saveKind,
   saveStatusLabel,
@@ -111,14 +112,13 @@ describe("decision payload", () => {
         serverAccepted: false,
       }),
     ).toBe("Round closed · no save");
-    expect(emptyStartsCopy("scheduled")).toBe("No starts staged for this round · up to 2 when it opens");
-    expect(emptyStartsCopy("scheduled")).not.toMatch(/No projects chosen/);
-    expect(emptyStartsCopy("open")).toBe("No projects chosen · up to 2 starts");
-    expect(emptyStartsCopy("published")).toBe("No starts staged for this round");
+    expect(emptyStartsCopy("scheduled")).toMatch(/up to two when the round opens/);
+    expect(emptyStartsCopy("open")).toMatch(/up to two this round/);
+    expect(emptyStartsCopy("published")).toMatch(/No projects were started/);
   });
 
   it("explains the engine hold when the live round has no accepted save", () => {
-    expect(silentHoldNotice({ live: true, roundOpen: true, serverAccepted: false })).toMatch(/holds remaining credits/);
+    expect(silentHoldNotice({ live: true, roundOpen: true, serverAccepted: false })).toMatch(/keeps remaining credits/);
     expect(silentHoldNotice({ live: true, roundOpen: true, serverAccepted: true })).toBeNull();
     expect(silentHoldNotice({ live: false, roundOpen: true, serverAccepted: false })).toBeNull();
   });
@@ -130,6 +130,13 @@ describe("decision payload", () => {
     });
     expect(out.projectStarts).toEqual(["GRID", "RIVER"]);
     expect(Object.keys(CATALOGUE)).toHaveLength(15);
+  });
+
+  it("rewrites the supersede trigger error into recoverable player copy", () => {
+    expect(humanizeSubmitError("clients may only insert accepted or late proposals")).toMatch(
+      /try Save again/,
+    );
+    expect(humanizeSubmitError("Bearer eyJhbGciOi service role")).toMatch(/last successful save/);
   });
 });
 

@@ -99,7 +99,7 @@ Not automated here (no Docker on the Phase 2 builder). After `db push`, a hosted
 - Browser: anon key only.
 - Official simulation, lock, scores, `town_states`, `published_results`: service role on the server after a session check.
 - Submit uses the user JWT against `submit_decision` (`auth.uid()`). Organiser RPCs are not executable as `authenticated`.
-- Rivals read `published_results` after `rounds.status = 'published'`, never `town_states`.
+- Captains may read their own `published_results` row after `rounds.status = 'published'`. They never read rival result rows or `town_states`. Organisers and judges of that competition may read published TownPublic rows (`0014`). Hosted apply of `0014` is a dashboard step.
 
 ### 6. Vercel
 

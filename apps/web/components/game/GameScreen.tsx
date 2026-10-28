@@ -8,6 +8,7 @@ import {
   decisionsEqual,
   emptyAllocations,
   fullAllocations,
+  humanizeSubmitError,
   idempotencyKeyFor,
   projectCost,
   saveStatusLabel,
@@ -96,7 +97,8 @@ export function GameScreen({
     !!ctx.round?.id &&
     !!ctx.team &&
     !deadlinePassed;
-  const serverAccepted = Boolean(ctx.submission) || submit.status === "success";
+  const serverAccepted =
+    !dirty && (submit.status === "success" || Boolean(ctx.submission));
   const saveLabel = saveStatusLabel({
     saving: submit.status === "submitting",
     live: ctx.mode === "live",
@@ -159,25 +161,36 @@ export function GameScreen({
       if (!res.ok || data?.ok === false) {
         setSubmit({
           status: "error",
-          message:
+          message: humanizeSubmitError(
             data?.message ||
-            data?.error ||
-            `Submission rejected (${res.status}). The last accepted server save is unchanged.`,
+              data?.error ||
+              `Submission rejected (${res.status}). The last accepted server save is unchanged.`,
+          ),
         });
         return;
       }
-      setAccepted(payload);
+      const confirmedStarts = data.applied?.projectStarts ?? payload.projectStarts;
+      const confirmedAlloc = data.applied?.allocations
+        ? fullAllocations(data.applied.allocations)
+        : payload.allocations;
+      const confirmed: DecisionPayload = {
+        allocations: confirmedAlloc,
+        projectStarts: confirmedStarts,
+      };
+      setStagedStarts(confirmed.projectStarts);
+      setAllocations(confirmed.allocations);
+      setAccepted(confirmed);
       setSubmit({
         status: "success",
         message:
           data.status === "duplicate"
-            ? "Already on the server — this exact decision was previously accepted."
-            : `Accepted on the server. ${payload.projectStarts.length} start${payload.projectStarts.length === 1 ? "" : "s"}; ${Math.round(data.applied?.unspent ?? 0)} cr would be held in reserve if this is the last save.`,
+            ? "Already saved — this exact plan is on the server."
+            : `Saved. ${confirmed.projectStarts.length} project${confirmed.projectStarts.length === 1 ? "" : "s"} started · ${Math.round(data.applied?.unspent ?? 0)} cr held in reserve.`,
       });
     } catch {
       setSubmit({
         status: "error",
-        message: "Network error reaching the server. Your last accepted save is unchanged.",
+        message: humanizeSubmitError("network"),
       });
     } finally {
       savingRef.current = false;
@@ -276,7 +289,6 @@ export function GameScreen({
         serverNow={serverNow}
         roundStatus={roundStatus}
         saveLabel={saveLabel}
-        onOpenStandings={() => setOverlay("standings")}
         onOpenScoring={() => setOverlay("scoring")}
         onOpenEvent={() => setOverlay("event")}
         onOpenDesk={() => {
@@ -392,7 +404,7 @@ export function GameScreen({
         }}
       />
 
-      {overlay === "standings" ? (
+      {overlay === "standings" && ctx.isOrganiser ? (
         <StandingsOverlay ctx={ctx} onClose={() => setOverlay(null)} />
       ) : null}
       {overlay === "scoring" ? <ScoringOverlay ctx={ctx} onClose={() => setOverlay(null)} /> : null}

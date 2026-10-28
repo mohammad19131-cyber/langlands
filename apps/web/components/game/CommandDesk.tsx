@@ -52,11 +52,11 @@ export function CommandDesk({
   return (
     <aside className="pointer-events-auto relative z-20 flex h-full w-full shrink-0 flex-col border-[#B89A60]/25 bg-[#0F1613]/97 backdrop-blur max-md:absolute max-md:inset-x-0 max-md:bottom-0 max-md:h-[min(62%,34rem)] max-md:border-t md:w-[26.5rem] md:border-l">
       <div className="flex items-center justify-between border-b border-[#B89A60]/15 px-4 py-2.5">
-        <p className="text-[0.72rem] uppercase tracking-[0.16em] text-[#E3DCC8]">Command desk</p>
+        <p className="text-[0.72rem] uppercase tracking-[0.16em] text-[#E3DCC8]">Your plan</p>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close command desk"
+          aria-label="Close plan panel"
           className="text-[#8A8674] transition-colors hover:text-[#E3DCC8]"
         >
           ✕
@@ -151,8 +151,8 @@ function BudgetTab({
   return (
     <div className="space-y-4 p-4">
       <p className="text-[0.68rem] leading-5 text-[#9A947F]">
-        Available credits come from the server: reserve plus income, minus maintenance. Numbers in
-        this desk are a proposal until saved.
+        Available credits are reserve plus income, minus upkeep. Nothing here counts until it is
+        saved.
       </p>
       <dl className="grid grid-cols-2 gap-2 text-[0.78rem]">
         <Ledger label="Available" value={`${Math.round(ctx.budget.available)} cr`} accent="#D9B15A" />
@@ -170,7 +170,7 @@ function BudgetTab({
           <span className="tabular-nums">{Math.round(sectorSpend)} cr</span>
         </div>
         <div className="mt-1 flex justify-between text-[#E3DCC8]">
-          <span>Held if accepted</span>
+          <span>Left in reserve</span>
           <span className={`tabular-nums ${remainder < -0.5 ? "text-[#C0533E]" : "text-[#9FC27E]"}`}>
             {Math.round(remainder)} cr
           </span>

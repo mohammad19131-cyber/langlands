@@ -83,7 +83,7 @@ export function ScoringOverlay({ ctx, onClose }: { ctx: GameContext; onClose: ()
       {!latest?.breakdown ? (
         <p className="mb-4 text-[0.84rem] leading-6 text-[#C9C2AD]">
           {ctx.publishedRounds.length > 0 && !ctx.team
-            ? "Staff accounts are not seated. Official pillar scores for all 20 towns are on the standings board."
+            ? "Staff accounts are not seated. Official 20-town scores are on the organiser board."
             : "Official pillar scores are unavailable until a round is published. That is not a zero."}
         </p>
       ) : (
@@ -247,8 +247,7 @@ export function ReviewModal({
         </div>
 
         <p className="text-[0.68rem] leading-4 text-[#6F6B5B]">
-          The server validates everything again — budget, prerequisites, conflicts, and the deadline.
-          Your browser cannot set scores, budgets, or results.
+          Saving sends this plan to the server. The clock, budget, and results stay on the server.
         </p>
 
         {submit.message ? (
@@ -274,11 +273,7 @@ export function ReviewModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={
-              submit.status === "submitting" ||
-              submit.status === "success" ||
-              submit.status === "closed"
-            }
+            disabled={submit.status === "submitting" || submit.status === "closed"}
             className="flex-1 border border-[#7BA157]/60 bg-[#2A4C39] px-3 py-2 text-[0.76rem] uppercase tracking-[0.06em] text-[#E7F0DE] transition-colors hover:bg-[#335c44] disabled:opacity-50"
           >
             {submit.status === "submitting"

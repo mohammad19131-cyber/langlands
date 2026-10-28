@@ -8,9 +8,11 @@
  * opens_at/closes_at), how many credits the town has, which starts are
  * legal, the simulated town, the official score, and when results publish.
  *
- * Teams never read rival submissions or unpublished town_states. After
- * publish they read published_results (TownPublic fields) only. RLS is
- * the backstop; Next.js still checks session + membership.
+ * Teams never read rival submissions, unpublished town_states, or rival
+ * published_results. After publish a captain may read their own TownPublic
+ * row. Organisers and judges of that competition may read published
+ * TownPublic rows. RLS is the backstop; Next.js still checks session +
+ * membership. Play/board loaders use the service role and then filter.
  *
  * Official writes (town_states, published_results, scores, process runs,
  * audit) use the service role on the server after an advisory lock. The

@@ -42,7 +42,6 @@ export function GameHeader({
   serverNow,
   roundStatus,
   saveLabel,
-  onOpenStandings,
   onOpenScoring,
   onOpenEvent,
   onOpenDesk,
@@ -51,7 +50,6 @@ export function GameHeader({
   serverNow: string;
   roundStatus: string;
   saveLabel: string;
-  onOpenStandings: () => void;
   onOpenScoring: () => void;
   onOpenEvent: () => void;
   onOpenDesk: () => void;
@@ -141,7 +139,7 @@ export function GameHeader({
           onClick={onOpenDesk}
           className="border border-[#D9B15A]/50 bg-[#D9B15A]/10 px-2.5 py-1.5 text-[0.68rem] uppercase tracking-[0.1em] text-[#F2ECDC] transition-colors hover:bg-[#D9B15A]/16"
         >
-          Desk
+          Plan
         </button>
         <div className="relative">
           <button
@@ -168,12 +166,6 @@ export function GameHeader({
                 >
                   Results
                 </a>
-                <a
-                  href="/board"
-                  className="block border border-[#B89A60]/30 px-3 py-1.5 text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
-                >
-                  Board
-                </a>
                 <button
                   type="button"
                   role="menuitem"
@@ -185,25 +177,22 @@ export function GameHeader({
                 >
                   Scoring
                 </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onOpenStandings();
-                  }}
-                  className="border border-[#B89A60]/30 px-3 py-1.5 text-left text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
-                >
-                  Standings
-                </button>
               </div>
               {ctx.isOrganiser ? (
-                <a
-                  href="/room"
-                  className="mt-3 block border border-[#B89A60]/30 px-3 py-1.5 text-center text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
-                >
-                  Control room
-                </a>
+                <div className="mt-3 grid gap-1.5">
+                  <a
+                    href="/board"
+                    className="block border border-[#B89A60]/30 px-3 py-1.5 text-center text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
+                  >
+                    Official board
+                  </a>
+                  <a
+                    href="/room"
+                    className="block border border-[#B89A60]/30 px-3 py-1.5 text-center text-[0.72rem] text-[#E3DCC8] transition-colors hover:bg-white/5"
+                  >
+                    Control room
+                  </a>
+                </div>
               ) : null}
               {ctx.signedIn ? (
                 <form action="/auth/sign-out" method="post" className="mt-3">

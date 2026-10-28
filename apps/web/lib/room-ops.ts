@@ -45,12 +45,21 @@ export type RoomRound = {
   lastRun: ProcessRunView | null;
 };
 
+export type RoomMember = {
+  userId: string;
+  displayName: string;
+  memberRole: "captain" | "member";
+};
+
 export type RoomTeam = {
   seat: number;
   teamId: string;
   name: string;
   loginId: string | null;
   disqualified: boolean;
+  credits: number;
+  creditsSource: "starting" | "published";
+  members: RoomMember[];
 };
 
 export type RoomSeat = RoomTeam & {
@@ -80,7 +89,13 @@ export function nextRoomAction(args: {
 }): RoomAction {
   const round = args.round;
   if (!round) return "none";
-  if (round.status === "published" || round.status === "void") return "none";
+  if (round.status === "void") return "none";
+  if (round.status === "published") {
+    if (args.competitionPaused) return "none";
+    const successor = args.rounds.find((row) => row.index === round.index + 1);
+    if (successor?.status === "scheduled") return "open";
+    return "none";
+  }
   if (round.status === "scheduled") {
     if (args.competitionPaused) return "none";
     return predecessorPublished(args.rounds, round.index) ? "open" : "none";
@@ -178,7 +193,7 @@ export function buildSeatsForRound(args: {
     const lockedWithSubmission = lockedBySeat.has(team.seat) ? Boolean(lockedBySeat.get(team.seat)) : null;
     return {
       ...team,
-      held: lockedBySeat.has(team.seat) ? !lockedBySeat.get(team.seat) : byTeam.get(team.teamId) == null,
+      held: lockedBySeat.has(team.seat) ? !lockedBySeat.get(team.seat) : false,
       status: deriveSeatStatus({
         disqualified: team.disqualified,
         roundStatus,
@@ -222,7 +237,45 @@ export function recoveryGuidance(error: string | null | undefined): string | nul
   if (text.includes("unauthorized")) {
     return "Not available.";
   }
+  if (text.includes("scoring did not finish") || text.includes("retrying process")) {
+    return "Stay unpublished. Retry process. Do not skip the round or hand-edit scores.";
+  }
+  if (text.includes("no safe next step")) {
+    return "Automatic progress stopped. Use the manual controls. Do not void or skip to recover.";
+  }
   return "The server refused the step. The round machine was not bypassed. Refresh and retry the same action if the runbook allows it.";
+}
+
+export function successorRound(rounds: RoomRound[], index: number): RoomRound | null {
+  return rounds.find((row) => row.index === index + 1) ?? null;
+}
+
+export function openTargetRound(args: {
+  selected: RoomRound | null;
+  rounds: RoomRound[];
+}): RoomRound | null {
+  if (!args.selected) return null;
+  if (args.selected.status === "scheduled") return args.selected;
+  if (args.selected.status === "published") {
+    const next = successorRound(args.rounds, args.selected.index);
+    return next?.status === "scheduled" ? next : null;
+  }
+  return null;
+}
+
+export function savedCount(seats: Array<{ status: SeatStatus }>): number {
+  return seats.filter((seat) => seat.status === "saved" || seat.status === "accepted").length;
+}
+
+export function holdCount(seats: Array<{ held: boolean; disqualified: boolean }>): number {
+  return seats.filter((seat) => seat.held && !seat.disqualified).length;
+}
+
+export function runnerMode(status: string): "manual" | "automatic" | "paused" | "complete" {
+  if (status === "live") return "automatic";
+  if (status === "paused") return "paused";
+  if (status === "closed") return "complete";
+  return "manual";
 }
 
 export function actionEndpoint(action: Exclude<RoomAction, "none">, roundId: string): string {

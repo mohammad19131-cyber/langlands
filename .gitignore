@@ -4,6 +4,8 @@ dist/
 *.tsbuildinfo
 .next/
 .next-release-check/
+.next-readiness/
+.next-readiness-build/
 .env
 .env.local
 .env.*.local

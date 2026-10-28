@@ -101,6 +101,7 @@ describe("public play payload", () => {
             penalty: 2,
             snapshot: 37.38,
           },
+          meanDamage: 12.4,
           isYou: false,
         },
       ],
@@ -193,6 +194,7 @@ describe("public play payload", () => {
           final: 37.38,
           rankingScore: 37.38,
           breakdown: ctx.ownHistory[0]!.breakdown,
+          meanDamage: 11.2,
           isYou: true,
         },
         {
@@ -214,6 +216,7 @@ describe("public play payload", () => {
             penalty: 0,
             snapshot: 35.99,
           },
+          meanDamage: 14.8,
           isYou: false,
         },
       ],
@@ -228,9 +231,9 @@ describe("public play payload", () => {
     expect(payload.round?.status).toBe("scheduled");
     expect(payload.publishedRounds).toEqual([1]);
     expect(payload.ownHistory.at(-1)?.final).toBe(37.38);
-    expect(payload.leaderboard?.find((row) => row.seat === 1)?.isYou).toBe(true);
-    expect(payload.leaderboard?.find((row) => row.seat === 1)?.rank).toBe(1);
-    expect(payload.leaderboard?.find((row) => row.seat === 2)?.isYou).toBe(false);
+    expect(payload.leaderboard).toBeNull();
+    expect(payload.boardByRound).toEqual({});
+    expect(JSON.stringify(payload)).not.toMatch(/Seat 02|35\.99|"rank":2/);
     expect(payload.submission).toBeNull();
     expect(payload.roundSummaries.filter((row) => row.status === "published").map((row) => row.index)).toEqual([
       1,

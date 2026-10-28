@@ -1,6 +1,6 @@
 # Database schema
 
-Status: specification. SQL draft: `docs/schema.sql` (preserved). Forward migrations: `0001`–`0006` in `supabase/migrations`. Phase 2 adds `published_results`, a six-round check, and an idempotent seed. Phase 3 adds lock-manifest / process-claim columns and round-machine RPCs. Audit: `supabase/SECURITY-AUDIT.md`.
+Status: specification. SQL draft: `docs/schema.sql` (preserved). Forward migrations: `0001`–`0015` in `supabase/migrations`. Phase 2 adds `published_results`, a six-round check, and an idempotent seed. Phase 3 adds lock-manifest / process-claim columns and round-machine RPCs. `0014` restricts participant `published_results` SELECT to the caller’s own team. `0015` adds organiser play-reset and team/member name RPCs. Audit: `supabase/SECURITY-AUDIT.md`.
 
 ## Principles
 
@@ -66,10 +66,10 @@ Column-level detail is in `docs/schema.sql`. Do not fork a second schema in appl
 
 Full policies: `docs/schema.sql` and `security-and-permissions.md`.
 
-Summary: teams read own submissions and own `town_states`; rivals never read `town_states`. After the round is `published`, participants and judges read `published_results` (TownPublic columns only). Organisers may read live submissions and private states (support view). **No** authenticated insert on scores or `published_results`.
+Summary: teams read own submissions and own `town_states`; rivals never read `town_states`. After the round is `published`, a captain may read **their own** `published_results` row (TownPublic columns only). Organisers and judges of that competition may read all published TownPublic rows. Organisers may read live submissions and private states (support view). **No** authenticated insert on scores or `published_results`. The Next.js play/board loaders use the service role and then filter: captains receive own history only; `/api/play/board` is organiser-only.
 
 ## Migrations
 
 Forward-only. Catalogue freeze is a data migration with hash stored on `competitions`. Never edit published `town_states` in place; void the round instead (`deployment-and-event-runbook.md`).
 
-`0009` stores full lock captures in `round_lock_private` (no browser GRANT) and keeps a public seat summary on `rounds.lock_manifest`. It also copies any pre-0009 full JSON into the private table and strips the public column. `0010` stamps an 18-minute window on `open_round`, adds `set_round_window` (organiser, while `open`), and `reopen_round` (unpublished `locked` only, before `town_states`). `0011` lets an organiser restore an unpublished `void` round to `scheduled` so the same round index can be opened again. Void does not count as published and does not skip Pack A. `0012` replaces table-level `GRANT SELECT` on `teams` with column grants so `authenticated` cannot read `password_hash`.
+`0009` stores full lock captures in `round_lock_private` (no browser GRANT) and keeps a public seat summary on `rounds.lock_manifest`. It also copies any pre-0009 full JSON into the private table and strips the public column. `0010` stamps an 18-minute window on `open_round`, adds `set_round_window` (organiser, while `open`), and `reopen_round` (unpublished `locked` only, before `town_states`). `0011` lets an organiser restore an unpublished `void` round to `scheduled` so the same round index can be opened again. Void does not count as published and does not skip Pack A. `0012` replaces table-level `GRANT SELECT` on `teams` with column grants so `authenticated` cannot read `password_hash`. `0013` lets `submit_decision` supersede an accepted row while the captain JWT is present; clients still cannot UPDATE submissions or set `status`. `0014` replaces `published_results_read` so participants cannot `SELECT` rival published rows; organisers and judges of that competition keep published TownPublic access. `0015` lets an organiser delete play history (submissions, town states, published results, process runs, lock captures) while keeping teams, members, credentials, staff, and the catalogue; it also lets that organiser rename a team and a member display name. It does not rewrite scores. Do not apply `0014` or `0015` to a hosted project from an agent session.

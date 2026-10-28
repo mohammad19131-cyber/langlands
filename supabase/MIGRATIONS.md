@@ -16,8 +16,11 @@ Forward-only. Do not edit applied files in place.
 | `0010_round_windows.sql` | 18-minute `open_round` stamp, `set_round_window`, `reopen_round` |
 | `0011_restore_voided_round.sql` | Unpublished `void` → `scheduled`; void clears private lock rows |
 | `0012_teams_hash_column_grants.sql` | Table-level `teams` SELECT revoked; `authenticated` may read public columns only, not `password_hash` |
+| `0013_submit_supersede_with_auth.sql` | `submit_decision` may supersede an accepted row while `auth.uid()` is the captain; clients still cannot UPDATE or set `status` |
+| `0014_published_results_own_row.sql` | Participant `SELECT` on `published_results` is own team after publish; organiser/judge of that competition keep TownPublic reads |
+| `0015_organiser_reset_and_team_edit.sql` | Organiser reset of play data (keeps teams/members); organiser rename of team and member display names |
 
-Apply in that order. Regenerate 0005 only via `npm run seed:sql` so catalogue rows stay aligned with `packages/sim`. Do not edit 0001–0006 in place. Do not apply `0009`–`0011` to a live competition from an agent session.
+Apply in that order. Regenerate 0005 only via `npm run seed:sql` so catalogue rows stay aligned with `packages/sim`. Do not edit 0001–0006 in place. Do not apply `0009`–`0015` to a live competition from an agent session.
 
 ## Phase 2 decisions (were documented conflicts; now explicit)
 

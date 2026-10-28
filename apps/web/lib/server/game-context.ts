@@ -7,7 +7,7 @@ import {
   type Town,
 } from "@langlands/sim";
 import { parseTown, townBadges } from "@langlands/round-machine";
-import type { IndicatorKey, TownView } from "../ashfen";
+import { ashfenMapLabel, type IndicatorKey, type TownView } from "../ashfen";
 import type { Budget, EventCode, GameContext, RoundInfo, RoundPhase } from "../game-types";
 import { getPublicSupabaseConfig, hasServiceRole } from "../env";
 import { publicPlayContext } from "../play-payload";
@@ -90,7 +90,7 @@ function previewContext(args: {
       eventCode: (PACK_A[1] as EventCode | null) ?? null,
       serverNow: new Date().toISOString(),
     },
-    town: townToView(town, "Ashfen · shared starting template", 0),
+    town: townToView(town, "Ashfen", 0),
     budget: computeBudget(town, 1),
     startedCodes: [],
     completedCodes: [],
@@ -292,17 +292,16 @@ export async function loadGameContext(): Promise<GameContext> {
         roundCount: (competitionRow as { round_count: number }).round_count,
       }
     : { id: competitionId, title: "Langlands R3", roundCount: 6 };
-  const {
-    boardByRound,
-    publishedRounds: publishedIndexes,
-    publishedRoundIndex,
-    leaderboard,
-  } = buildBoards({
-    roundSummaries,
-    teams: roster,
-    results: publishedRows,
-    viewerSeat: team.seat,
-  });
+  const publishedIndexes = publishedRounds.map((row) => row.round_index);
+  const publishedRoundIndex = lastPublished?.round_index ?? null;
+  const { boardByRound, leaderboard } = isOrganiser
+    ? buildBoards({
+        roundSummaries,
+        teams: roster,
+        results: publishedRows,
+        viewerSeat: team.seat,
+      })
+    : { boardByRound: {}, leaderboard: null };
 
   // Resolve the town the player is looking at + the budget for the decision round.
   let town: Town;
@@ -320,16 +319,21 @@ export async function loadGameContext(): Promise<GameContext> {
   if (activeRound && activeRound.status === "published") {
     town = loadedTown ?? createInitialTown();
     displayRound = activeRound.round_index;
-    townLabel = `Ashfen · after round ${activeRound.round_index}`;
+    townLabel = ashfenMapLabel({
+      roundIndex: activeRound.round_index,
+      published: true,
+      entering: false,
+    });
     budget = computeBudget(town, activeRound.round_index + 1);
-    notice = "This round is published. Review the outcome and the standings.";
+    notice = "This round is published. Review the outcome.";
   } else if (activeRound && loadedTown) {
     town = loadedTown;
     displayRound = activeRound.round_index - 1;
-    townLabel =
-      activeRound.round_index === 1
-        ? "Ashfen · shared starting template"
-        : `Ashfen · entering round ${activeRound.round_index}`;
+    townLabel = ashfenMapLabel({
+      roundIndex: activeRound.round_index,
+      published: false,
+      entering: activeRound.round_index > 1,
+    });
     budget = computeBudget(town, activeRound.round_index);
     if (activeRound.status === "scheduled") {
       notice = "The next round has not opened yet. Plan ahead; you can submit once it opens.";
@@ -339,13 +343,13 @@ export async function loadGameContext(): Promise<GameContext> {
   } else if (activeRound) {
     town = createInitialTown();
     displayRound = 0;
-    townLabel = "Ashfen · shared starting template";
+    townLabel = "Ashfen";
     budget = computeBudget(town, 1);
     notice = "The previous round is not published yet, so the live town isn't available.";
   } else {
     town = createInitialTown();
     displayRound = 0;
-    townLabel = "Ashfen · shared starting template";
+    townLabel = "Ashfen";
     budget = computeBudget(town, 1);
     notice = "No rounds have been scheduled yet.";
   }
@@ -420,12 +424,20 @@ async function loadStaffPlayContext(
     loadCompetitionRoster(admin, args.competitionId),
     loadPublishedResultRows(admin, publishedIds),
   ]);
-  const { boardByRound, publishedRounds, publishedRoundIndex, leaderboard } = buildBoards({
-    roundSummaries,
-    teams: roster,
-    results: publishedRows,
-    viewerSeat: null,
-  });
+  const { boardByRound, publishedRounds, publishedRoundIndex, leaderboard } = args.isOrganiser
+    ? buildBoards({
+        roundSummaries,
+        teams: roster,
+        results: publishedRows,
+        viewerSeat: null,
+      })
+    : {
+        boardByRound: {},
+        publishedRounds: roundSummaries.filter((row) => row.status === "published").map((row) => row.index),
+        publishedRoundIndex:
+          roundSummaries.filter((row) => row.status === "published").map((row) => row.index).at(-1) ?? null,
+        leaderboard: null,
+      };
 
   const openRound = rounds.find((r) => r.status === "open");
   const inFlight = rounds.find((r) => r.status === "locked" || r.status === "processing");
@@ -435,12 +447,11 @@ async function loadStaffPlayContext(
 
   const town = createInitialTown();
   const serverNow = new Date().toISOString();
-  const notice =
-    publishedRounds.length > 0
+  const notice = args.isOrganiser
+    ? publishedRounds.length > 0
       ? "Staff accounts are not seated on a team. Official standings use published scores. Open the control room to run the competition."
-      : args.isOrganiser
-        ? "Staff accounts are not seated on a team. Open the control room to run the competition. No round has been published yet."
-        : "Your account is signed in but not seated on a team yet. Once your team is assigned, reload.";
+      : "Staff accounts are not seated on a team. Open the control room to run the competition. No round has been published yet."
+    : "Your account is signed in but not seated on a team yet. Once your team is assigned, reload.";
 
   return publicPlayContext({
     mode: "preview",
@@ -467,7 +478,7 @@ async function loadStaffPlayContext(
           eventCode: (PACK_A[1] as EventCode | null) ?? null,
           serverNow,
         },
-    town: townToView(town, "Ashfen · shared starting template", 0),
+    town: townToView(town, "Ashfen", 0),
     budget: computeBudget(town, 1),
     startedCodes: [],
     completedCodes: [],

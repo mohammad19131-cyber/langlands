@@ -4,6 +4,7 @@ import { createServiceRoleClient } from "../../../../lib/supabase/admin";
 import { createServerSupabase } from "../../../../lib/supabase/server";
 import { provisionQualifiedTeams } from "../../../../lib/server/provision-teams";
 import { assertProvisionTarget } from "../../../../lib/supabase-target";
+import { bearerToken, secretsMatch } from "../../../../lib/secret-match";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,7 +109,7 @@ async function assertProvisionAllowed(
   }
 
   const authHeader = request.headers.get("authorization") ?? "";
-  if (authHeader === `Bearer ${provisionSecret}`) {
+  if (secretsMatch(bearerToken(authHeader), provisionSecret)) {
     return { ok: true };
   }
 

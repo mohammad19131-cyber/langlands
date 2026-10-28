@@ -24,7 +24,9 @@ export function SeatGrid({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <p className="text-[0.62rem] uppercase tracking-[0.14em] text-[#8A8674]">20 seats</p>
         <p className="text-[0.66rem] text-[#8A8674]">
-          {roundStatus === "open" ? "Saved = accepted write, still editable" : "Accepted = captured at lock"}
+          {roundStatus === "open"
+            ? "Saved plans can still be changed until time runs out"
+            : "After close, each seat is frozen"}
         </p>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-5">
@@ -37,6 +39,9 @@ export function SeatGrid({
               </span>
               <span className="mt-1 block truncate text-[0.8rem] text-[#E3DCC8]">
                 {seat.loginId ? `Team ${seat.loginId}` : seat.name}
+              </span>
+              <span className="mt-1 block text-[0.72rem] tabular-nums text-[#C9C2AD]">
+                {Number.isFinite(seat.credits) ? `${seat.credits.toFixed(seat.credits % 1 === 0 ? 0 : 2)} cr` : "— cr"}
               </span>
               <span className="mt-1 block text-[0.66rem] uppercase tracking-[0.1em]" style={{ color: tone.color }}>
                 {tone.label}

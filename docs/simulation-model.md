@@ -56,7 +56,7 @@ For round `n`, Phase 1 reference engine (`docs/simulation/engine.py`):
 9. `reserve = unspent`
 10. Official snapshot
 
-Charge order is starts-then-sectors (`game-rules.md`). Catalogue text that said “after operating allocations” is resolved in favour of the frozen game-rules order. Maintenance begins the round after a start. Ongoing effects begin the round after completion.
+Charge order is starts-then-sectors (`game-rules.md`, `interventions-catalogue.md`). Maintenance begins the round after a start. Ongoing effects begin the round after completion.
 
 Identical inputs must yield identical outputs. No `Math.random`, no wall-clock inside the engine.
 

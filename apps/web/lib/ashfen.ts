@@ -38,9 +38,20 @@ export type TownView = {
   badges: { energyMix: EnergyMix; agriculture: AgriMix; industry: IndustryMix };
 };
 
+export function ashfenMapLabel(args: {
+  roundIndex: number;
+  published: boolean;
+  entering: boolean;
+}): string {
+  if (args.published) return `Ashfen after round ${args.roundIndex}`;
+  if (args.roundIndex <= 1) return "Ashfen";
+  if (args.entering) return `Ashfen, entering round ${args.roundIndex}`;
+  return "Ashfen";
+}
+
 /** Round 0 — the town as every team inherits it after the disaster. */
 export const TOWN_T0: TownView = {
-  label: "Round 0 · shared starting template",
+  label: "Ashfen",
   round: 0,
   indicators: {
     air: 32,

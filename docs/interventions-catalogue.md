@@ -8,16 +8,18 @@ Effects are **game units** added to town variables. They are assumptions, not me
 
 ## How they attach to the engine
 
-After operating allocations:
+**Charge order (frozen):** the server charges accepted catalogue starts first (listed order), then scales sector allocations to what remains, then leftover credits become reserve. If starts exceed `available`, drop last-listed starts. This matches `game-rules.md`, `simulation-model.md`, and `packages/sim` `stepRound`.
+
+After drift, delayed landings, ongoing effects, and the income / maintenance calculation:
 
 1. Validate codes, copies, mutex, prerequisites against **pre-round** state.
-2. Charge cost from remaining `available` (after sector spend, or with sector spend — see below).
+2. Charge accepted start costs from `available`.
 3. If `build_rounds == 0`, apply `immediate_effects` this round before the event.
 4. Else queue delayed effects for T+`build_rounds`.
 5. From the next round, add `maintenance_per_round` to the maintenance bill.
 6. `ongoing_effects` apply each later round after completion.
 
-**Budget composition (recommendation, frozen):** teams choose sector integers and a list of starts. Server charges starts first (listed order), then sectors, then remainder is reserve. If starts exceed `available`, drop last-listed starts.
+**Budget composition (frozen):** teams choose sector integers and a list of starts. Starts are charged before sectors. Remainder is reserve.
 
 ## Mutex groups
 

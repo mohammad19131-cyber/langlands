@@ -31,7 +31,6 @@ export function SiteFooter() {
             <li><Link href="/sign-in" className="hover:text-ivory">Sign in</Link></li>
             <li><Link href="/rules" className="hover:text-ivory">Field guide</Link></li>
             <li><Link href="/play" className="hover:text-ivory">Decision desk</Link></li>
-            <li><Link href="/board" className="hover:text-ivory">Results board</Link></li>
           </ul>
         </nav>
 

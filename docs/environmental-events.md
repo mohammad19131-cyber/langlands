@@ -91,7 +91,13 @@ fiscal -= 0.06 * damage
 air    -= 0.05 * damage
 ```
 
-`CLINICS` multiplies by 0.85.
+Completed catalogue projects multiply this damage (same rule as flood: only `town.completed`, stacked). Source: `docs/interventions-catalogue.md` and `eventMultiplier` in `packages/sim` / `docs/simulation/engine.py`.
+
+- `CLINICS` ×0.85
+- `WASTEWATER` ×0.90
+- `GREEN_MFG` ×0.90
+
+If more than one is completed, multiply each. Example: clinics and wastewater → 0.85 × 0.90 = 0.765. That stack is published, not secret. Build time still applies: `CLINICS` can complete in the contamination round (`build_rounds = 0`); `WASTEWATER` and `GREEN_MFG` complete one round after they start, so a round-5 start does not shield round 5.
 
 ## What this sequence does strategically
 

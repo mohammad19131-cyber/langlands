@@ -134,16 +134,16 @@ export function saveStatusLabel(args: {
     return args.serverAccepted ? "Saved on server" : "Round closed · no save";
   }
   if (args.dirty) return "Unsaved draft";
-  return args.serverAccepted ? "Saved on server" : "No server save yet";
+  return args.serverAccepted ? "Saved on server" : "Not saved yet";
 }
 
 /** Empty start chips describe this round's staging, not a previous published decision. */
 export function emptyStartsCopy(roundStatus: string): string {
   if (roundStatus === "scheduled") {
-    return "No starts staged for this round · up to 2 when it opens";
+    return "No projects chosen yet. You may start up to two when the round opens.";
   }
-  if (roundStatus === "open") return "No projects chosen · up to 2 starts";
-  return "No starts staged for this round";
+  if (roundStatus === "open") return "No projects chosen. You may start up to two this round.";
+  return "No projects were started this round.";
 }
 
 /** Engine default when the round locks with no accepted submission. */
@@ -153,5 +153,39 @@ export function silentHoldNotice(args: {
   serverAccepted: boolean;
 }): string | null {
   if (!args.live || !args.roundOpen || args.serverAccepted) return null;
-  return "No server save yet. If the round locks this way, the town starts nothing, spends nothing, and holds remaining credits as reserve.";
+  return "Nothing is saved yet. If time runs out like this, Ashfen starts no projects and keeps remaining credits in reserve.";
+}
+
+/** Map round-machine / Postgres errors to player-facing copy. Never echo secrets. */
+export function humanizeSubmitError(raw: string | null | undefined): string {
+  const text = (raw ?? "").trim();
+  if (!text) return "The server rejected this plan. Your last successful save is unchanged.";
+  if (/clients may only insert accepted or late/i.test(text)) {
+    return "The server could not replace your previous save. Your edits are still here — try Save again.";
+  }
+  if (/deadline|closed|not open/i.test(text)) {
+    return "This round is no longer accepting saves.";
+  }
+  if (/unauthorized|not a member/i.test(text)) {
+    return "You cannot save for another team.";
+  }
+  if (/at most two|duplicate intervention/i.test(text)) {
+    return "You can start at most two projects, and each only once.";
+  }
+  if (/mutex|cannot start together/i.test(text)) {
+    return "Those two projects cannot start in the same round.";
+  }
+  if (/unknown intervention|prereq|GRID/i.test(text) && /COAL|invalid/i.test(text)) {
+    return "That project cannot start yet. Check what must already be finished.";
+  }
+  if (/allocation|eight sectors|non-negative/i.test(text)) {
+    return "Sector amounts must be zero or more across all eight sectors.";
+  }
+  if (/network|fetch/i.test(text)) {
+    return "Could not reach the server. Your last successful save is unchanged.";
+  }
+  if (text.length > 180 || /password|token|service.role|jwt/i.test(text)) {
+    return "The server rejected this plan. Your last successful save is unchanged.";
+  }
+  return text;
 }

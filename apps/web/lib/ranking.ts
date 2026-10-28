@@ -18,6 +18,7 @@ export const PUBLIC_BOARD_KEYS = [
   "final",
   "rankingScore",
   "breakdown",
+  "meanDamage",
   "isYou",
 ] as const;
 
@@ -46,6 +47,7 @@ export type BoardSeat = {
   final: number | null;
   rankingScore: number | null;
   breakdown: ScoreBreakdown | null;
+  meanDamage: number | null;
   isYou: boolean;
 };
 
@@ -53,19 +55,38 @@ export type Rankable = {
   seat: number;
   rankingScore: number;
   ecology: number;
+  /** Mean of shock_log entries > 0. Null when the persisted value is unavailable. */
+  meanDamage?: number | null;
 };
 
 /**
- * Official public order (docs/scoring-system.md, game-rules.md):
+ * Official public order (docs/scoring-system.md §Tie-break, docs/game-rules.md):
  * 1. higher official score
- * 2. higher ecology category
- * 3. lower mean event damage — not present on TownPublic, so it cannot be applied here
+ * 2. higher ecology index E
+ * 3. lower mean event damage (rounds 2–5 / shock_log entries > 0)
  * 4. lower seat number
+ *
+ * Missing mean-damage on either side skips that step and uses seat.
+ * Do not invent a default of 0 for unavailable data.
  */
 export function compareOfficial(a: Rankable, b: Rankable): number {
   if (a.rankingScore !== b.rankingScore) return b.rankingScore - a.rankingScore;
   if (a.ecology !== b.ecology) return b.ecology - a.ecology;
+  const aDamage = a.meanDamage;
+  const bDamage = b.meanDamage;
+  if (aDamage != null && bDamage != null && aDamage !== bDamage) {
+    return aDamage - bDamage;
+  }
   return a.seat - b.seat;
+}
+
+/** Extra score_breakdown key written at process time. Not a scoring pillar. */
+export function meanDamageFromBreakdown(raw: unknown): number | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const source = raw as Record<string, unknown>;
+  const value = source.meanDamage ?? source.mean_event_damage ?? source.mean_damage;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function boardForRound(args: {
@@ -115,6 +136,7 @@ export function boardForRound(args: {
       final,
       rankingScore: published ? rankingScore({ snapshot, final }) : null,
       breakdown,
+      meanDamage: published ? meanDamageFromBreakdown(published.breakdown) : null,
       isYou: args.viewerSeat === seat,
     };
   });
@@ -123,8 +145,18 @@ export function boardForRound(args: {
     .filter((row) => row.published && !row.disqualified && row.rankingScore != null && row.breakdown)
     .sort((a, b) =>
       compareOfficial(
-        { seat: a.seat, rankingScore: a.rankingScore as number, ecology: a.breakdown?.ecology ?? 0 },
-        { seat: b.seat, rankingScore: b.rankingScore as number, ecology: b.breakdown?.ecology ?? 0 },
+        {
+          seat: a.seat,
+          rankingScore: a.rankingScore as number,
+          ecology: a.breakdown?.ecology ?? 0,
+          meanDamage: a.meanDamage,
+        },
+        {
+          seat: b.seat,
+          rankingScore: b.rankingScore as number,
+          ecology: b.breakdown?.ecology ?? 0,
+          meanDamage: b.meanDamage,
+        },
       ),
     );
 

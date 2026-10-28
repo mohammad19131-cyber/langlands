@@ -69,6 +69,9 @@ function migrationFiles(): string[] {
     "0010_round_windows.sql",
     "0011_restore_voided_round.sql",
     "0012_teams_hash_column_grants.sql",
+    "0013_submit_supersede_with_auth.sql",
+    "0014_published_results_own_row.sql",
+    "0015_organiser_reset_and_team_edit.sql",
   ].map((name) => resolve(repoRoot, "supabase/migrations", name));
 }
 
@@ -101,6 +104,16 @@ export async function asUser<T>(
   } finally {
     await db.exec("reset role");
     await db.exec("select set_config('request.jwt.claims', '', false)");
+  }
+}
+
+export async function asAnon<T>(db: PGlite, fn: () => Promise<T>): Promise<T> {
+  await db.exec("select set_config('request.jwt.claims', '', false)");
+  await db.exec("set role anon");
+  try {
+    return await fn();
+  } finally {
+    await db.exec("reset role");
   }
 }
 

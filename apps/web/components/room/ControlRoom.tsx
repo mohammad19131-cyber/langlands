@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ENGINE_VERSION } from "@langlands/sim/public";
 import { clockLabel, formatClockTime, remainingMs } from "../../lib/clock";
 import { EVENT_LABELS } from "../../lib/format";
 import {
@@ -12,50 +11,56 @@ import {
   canRestore,
   canVoid,
   currentRoomRound,
+  holdCount,
   missingCount,
   nextRoomAction,
+  openTargetRound,
   publicationReady,
   recoveryGuidance,
+  runnerMode,
+  savedCount,
   type RoomAction,
   type RoomRound,
 } from "../../lib/room-ops";
 import type { RoomContext } from "../../lib/server/room-context";
+import { RESET_PLAY_CONFIRM } from "../../lib/admin-ops";
 import { SeatGrid } from "./SeatGrid";
+import { TeamRoster } from "./TeamRoster";
 
 type LiveRoom = Extract<RoomContext, { ok: true }>;
 
 const ACTION_COPY: Record<Exclude<RoomAction, "none">, { title: string; body: string }> = {
   open: {
     title: "Open this round?",
-    body: "The server stamps an 18-minute window from now. Teams submit until that closing time. The browser clock is not authoritative.",
+    body: "Teams get 18 minutes on the server clock to save their plans. The time on this screen is only a display.",
   },
   lock: {
-    title: "Lock this round?",
-    body: "The lock manifest of all 20 seats is captured now. Teams without an accepted save receive the default hold. This cannot be quietly undone after process writes town states.",
+    title: "Close submissions now?",
+    body: "Every team’s last saved plan is frozen. Teams with nothing saved keep all credits in reserve and start no projects. After scoring starts, this cannot be quietly undone.",
   },
   process: {
-    title: "Process 20 towns?",
-    body: "The frozen engine runs twice. A checksum mismatch stays locked and is not published. A second process after a successful run is a no-op.",
+    title: "Score this round?",
+    body: "The same engine scores all 20 towns twice. If the two runs disagree, results stay unpublished. A second click after a successful score does nothing.",
   },
   publish: {
     title: "Publish official results?",
-    body: "Publication requires the stored 20/20 checksum to match a replay. A published round cannot be reopened.",
+    body: "Players and the public board see these scores. A published round cannot be reopened or rewritten.",
   },
   void: {
-    title: "Void this unpublished round?",
-    body: "Void abandons this unpublished round. Published scores are never rewritten. Later rounds still cannot skip this round — restore it to scheduled if the same Pack A year must be played.",
+    title: "Abandon this unpublished round?",
+    body: "Use only if this round must be thrown out. Published scores are never changed. Restore it before opening the next year.",
   },
   restore: {
-    title: "Restore this voided round?",
-    body: "The round returns to scheduled. Open stamps a new 18-minute window. This does not skip the event and does not rewrite published scores.",
+    title: "Restore this abandoned round?",
+    body: "It returns to waiting. Opening starts a new 18-minute window. This does not skip a year or change published scores.",
   },
   reopen: {
-    title: "Reopen this locked round?",
-    body: "Teams can save again until the existing server closing time. Reopen is only allowed before process writes town states. Published rounds cannot be reopened.",
+    title: "Let teams save again?",
+    body: "Only before scoring has written towns. The original closing time stays unless you add time first.",
   },
   extend: {
     title: "Add five minutes?",
-    body: "The server closing time moves forward five minutes from the later of now or the current close. The browser clock is not authoritative.",
+    body: "Moves the server closing time five minutes later. Use this if delegates still need time.",
   },
 };
 
@@ -63,7 +68,8 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
   const router = useRouter();
   const [room, setRoom] = useState(initial);
   const [selectedId, setSelectedId] = useState(initial.currentRoundId ?? initial.rounds[0]?.id ?? null);
-  const [confirm, setConfirm] = useState<Exclude<RoomAction, "none"> | null>(null);
+  const [confirm, setConfirm] = useState<Exclude<RoomAction, "none"> | "reset" | null>(null);
+  const [resetPhrase, setResetPhrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +91,11 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
   });
   const remaining = remainingMs(selected?.closesAt ?? null, room.serverNow, Date.now() + tick * 0, sampledAt);
   const missing = missingCount(seats);
+  const saved = savedCount(seats);
+  const holds = holdCount(seats);
   const canPublish = publicationReady(selected, selected?.lastRun ?? null);
+  const mode = runnerMode(room.competition.status);
+  const openTarget = openTargetRound({ selected, rounds: room.rounds });
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((n) => n + 1), 1000);
@@ -111,6 +121,32 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (mode !== "automatic") return;
+    const tickAuto = async () => {
+      try {
+        const tickRes = await fetch("/api/event/tick", { method: "POST" });
+        const tickBody = (await tickRes.json().catch(() => ({}))) as {
+          ok?: boolean;
+          plan?: { step?: string; reason?: string };
+          error?: string;
+        };
+        if (tickBody.plan?.step === "blocked" || tickBody.ok === false) {
+          setError(tickBody.plan?.reason || tickBody.error || "Automatic progress stopped.");
+        }
+        const snap = await fetch("/api/room", { cache: "no-store" });
+        if (snap.ok) {
+          const body = (await snap.json()) as LiveRoom;
+          if (body.ok) setRoom(body);
+        }
+      } catch {
+        /* keep last snapshot */
+      }
+    };
+    const id = window.setInterval(tickAuto, 20_000);
+    return () => window.clearInterval(id);
+  }, [mode]);
+
   const clock = selected
     ? clockLabel({
         status: selected.status,
@@ -121,12 +157,13 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
 
   async function run(next: Exclude<RoomAction, "none">) {
     if (!selected) return;
+    const targetId = next === "open" ? (openTarget?.id ?? selected.id) : selected.id;
     setBusy(true);
     setError(null);
     setMessage(null);
     try {
       const res = await fetch(
-        next === "extend" ? `/api/rounds/${selected.id}/window` : `/api/rounds/${selected.id}/${next}`,
+        next === "extend" ? `/api/rounds/${targetId}/window` : `/api/rounds/${targetId}/${next}`,
         {
           method: "POST",
           headers: next === "extend" ? { "Content-Type": "application/json" } : undefined,
@@ -168,17 +205,105 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
     }
   }
 
+  async function startEvent() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/event/start", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok || data.ok === false) {
+        setError(data.message || data.error || `Start failed (${res.status})`);
+        return;
+      }
+      setMessage("Event started. Round 1 is open for 18 minutes.");
+      router.refresh();
+      const snap = await fetch("/api/room", { cache: "no-store" });
+      if (snap.ok) {
+        const body = (await snap.json()) as LiveRoom;
+        if (body.ok) setRoom(body);
+      }
+    } catch {
+      setError("Could not start the event. The last known server state is unchanged.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetPlay() {
+    if (resetPhrase.trim() !== RESET_PLAY_CONFIRM) {
+      setError(`Type ${RESET_PLAY_CONFIRM} to confirm the reset.`);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/reset-play", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: resetPhrase.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok || data.ok === false) {
+        setError(data.message || data.error || `Reset failed (${res.status})`);
+        return;
+      }
+      setMessage("Play data cleared. Teams and members were kept. Starting credits are 220.");
+      setConfirm(null);
+      setResetPhrase("");
+      router.refresh();
+      const snap = await fetch("/api/room", { cache: "no-store" });
+      if (snap.ok) {
+        const body = (await snap.json()) as LiveRoom;
+        if (body.ok) setRoom(body);
+      }
+    } catch {
+      setError("Could not reset play data. The last known server state is unchanged.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pauseEvent(resume: boolean) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/event/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resume }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string };
+      if (!res.ok || data.ok === false) {
+        setError(data.message || data.error || `Update failed (${res.status})`);
+        return;
+      }
+      setMessage(resume ? "Automatic progress resumed." : "Automatic progress paused. Manual steps still work.");
+      const snap = await fetch("/api/room", { cache: "no-store" });
+      if (snap.ok) {
+        const body = (await snap.json()) as LiveRoom;
+        if (body.ok) setRoom(body);
+      }
+    } catch {
+      setError("Could not update automatic progress.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const confirmBody = useMemo(() => {
-    if (!confirm || !selected) return "";
+    if (!confirm || confirm === "reset" || !selected) return "";
     const base = ACTION_COPY[confirm].body;
     if (confirm === "open") {
-      return `${base} Scheduled seed times are ignored; open writes now → now + 18 minutes.`;
+      return `${base} Opening starts a fresh 18-minute clock from now.`;
     }
     if (confirm === "lock") {
       return `${base} ${missing} seated team${missing === 1 ? "" : "s"} currently have no accepted save.`;
     }
     if (confirm === "publish") {
-      return `${base} Stored checksum ${selected.processChecksum ?? "—"}.`;
+      return `${base} Scoring already succeeded for this round.`;
     }
     return base;
   }, [confirm, missing, selected]);
@@ -188,22 +313,21 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
       <header className="flex flex-wrap items-center gap-3 border-b border-[#B89A60]/20 bg-[#0E1512]/95 px-4 py-3">
         <div>
           <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-[#E3DCC8]">
-            Control room
+            {room.competition.title}
           </p>
-          <p className="mt-0.5 text-[0.7rem] text-[#8A8674]">{room.competition.title}</p>
+          <p className="mt-0.5 text-[0.7rem] text-[#8A8674]">
+            {mode === "automatic"
+              ? "Automatic — rounds advance after each deadline"
+              : mode === "paused"
+                ? "Paused — automatic progress is stopped"
+                : mode === "complete"
+                  ? "Finished — official results are on the board"
+                  : "Manual — you run each step"}
+          </p>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2 text-[0.66rem] uppercase tracking-[0.1em] text-[#8A8674]">
-          <span className="border border-[#B89A60]/25 px-2 py-1">
-            Engine {room.competition.engineVersion || ENGINE_VERSION}
-          </span>
-          <span className="border border-[#B89A60]/25 px-2 py-1">
-            Catalogue {room.competition.catalogueHash.slice(0, 12) || "—"}
-          </span>
-          <a href="/play" className="border border-[#B89A60]/25 px-2 py-1 text-[#C9C2AD] hover:bg-white/5">
-            Play
-          </a>
           <a href="/board" className="border border-[#B89A60]/25 px-2 py-1 text-[#C9C2AD] hover:bg-white/5">
-            Board
+            Leaderboard
           </a>
           <form action="/auth/sign-out" method="post">
             <button type="submit" className="border border-[#B89A60]/25 px-2 py-1 text-[#C9C2AD] hover:bg-white/5">
@@ -247,14 +371,16 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
                   </p>
                 </div>
                 <p className="text-[0.72rem] uppercase tracking-[0.12em] text-[#D9B15A]">
-                  Next: {action === "none" ? "stand by" : action}
+                  Next: {primaryLabel(action, selected)}
                 </p>
               </div>
-              {selected.status === "open" ? (
-                <p className="mt-3 text-[0.78rem] text-[#C9C2AD]">
-                  {missing} of {seats.length} seated teams have no accepted save.
-                </p>
-              ) : null}
+              <dl className="mt-4 grid grid-cols-2 gap-2 text-[0.78rem] sm:grid-cols-4">
+                <Stat label="Teams seated" value={String(seats.length)} />
+                <Stat label="Plans saved" value={String(saved)} />
+                <Stat label="Not yet saved" value={String(missing)} />
+                <Stat label="Official holds" value={String(holds)} />
+              </dl>
+              <p className="mt-3 text-[0.78rem] leading-6 text-[#C9C2AD]">{operatorHint(selected, action, missing, mode)}</p>
               {room.competition.paused ? (
                 <p className="mt-3 text-[0.78rem] text-[#C7A954]">Competition paused. Opening is blocked.</p>
               ) : null}
@@ -267,6 +393,25 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
             seats={seats}
             roundId={selected?.id ?? null}
             roundStatus={selected?.status ?? "none"}
+          />
+
+          <TeamRoster
+            teams={room.teams}
+            busy={busy}
+            onSaved={(text) => {
+              setError(null);
+              setMessage(text);
+              void fetch("/api/room", { cache: "no-store" })
+                .then((res) => res.json())
+                .then((body: LiveRoom) => {
+                  if (body.ok) setRoom(body);
+                })
+                .catch(() => undefined);
+            }}
+            onError={(text) => {
+              setMessage(null);
+              setError(text);
+            }}
           />
 
           {selected?.manifest.length ? (
@@ -284,8 +429,7 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
             <div className="border border-[#B89A60]/15 p-4 text-[0.78rem] text-[#C9C2AD]">
               <p className="text-[0.62rem] uppercase tracking-[0.14em] text-[#8A8674]">Last process run</p>
               <p className="mt-2">
-                Attempt {selected.lastRun.attempt} · {selected.lastRun.ok ? "ok" : "failed"} · checksum{" "}
-                {selected.lastRun.checksum ?? "—"}
+                Attempt {selected.lastRun.attempt} · {selected.lastRun.ok ? "succeeded" : "failed"}
               </p>
               {selected.lastRun.engineVersion ? <p className="mt-1">Engine {selected.lastRun.engineVersion}</p> : null}
               {selected.lastRun.error ? (
@@ -303,58 +447,115 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
           {message ? <p className="text-[0.8rem] text-[#9FC27E]">{message}</p> : null}
 
           <div className="flex flex-wrap gap-2">
+            {mode !== "automatic" && mode !== "complete" ? (
+              <ActionButton
+                label="Start automatic event"
+                disabled={busy || room.competition.paused}
+                accent
+                onClick={() => void startEvent()}
+              />
+            ) : null}
+            {mode === "automatic" ? (
+              <ActionButton label="Pause automatic" disabled={busy} onClick={() => void pauseEvent(false)} />
+            ) : null}
+            {mode === "paused" ? (
+              <ActionButton label="Resume automatic" disabled={busy} accent onClick={() => void pauseEvent(true)} />
+            ) : null}
             <ActionButton
-              label="Open"
-              disabled={!selected || action !== "open" || busy}
-              onClick={() => setConfirm("open")}
+              label={primaryLabel(action, selected)}
+              disabled={!selected || action === "none" || (action === "publish" && !canPublish) || busy}
+              accent={action === "publish" || action === "open"}
+              onClick={() => action !== "none" && setConfirm(action)}
             />
             <ActionButton
               label="Add 5 minutes"
               disabled={!selected || !canExtend(selected.status) || busy}
               onClick={() => setConfirm("extend")}
             />
-            <ActionButton
-              label="Lock"
-              disabled={!selected || action !== "lock" || busy}
-              onClick={() => setConfirm("lock")}
-            />
-            <ActionButton
-              label={busy && confirm === "process" ? "Processing…" : "Process"}
-              disabled={!selected || action !== "process" || busy}
-              onClick={() => setConfirm("process")}
-            />
-            <ActionButton
-              label="Publish"
-              disabled={!selected || action !== "publish" || !canPublish || busy}
-              accent
-              onClick={() => setConfirm("publish")}
-            />
-            <ActionButton
-              label="Reopen"
-              disabled={!selected || !canReopen(selected) || busy}
-              onClick={() => setConfirm("reopen")}
-            />
-            <ActionButton
-              label="Void"
-              danger
-              disabled={!selected || !canVoid(selected.status) || busy}
-              onClick={() => setConfirm("void")}
-            />
-            <ActionButton
-              label="Restore"
-              disabled={!selected || !canRestore(selected.status) || busy}
-              onClick={() => setConfirm("restore")}
-            />
           </div>
+          <details className="border border-white/10 px-3 py-2">
+            <summary className="cursor-pointer text-[0.72rem] uppercase tracking-[0.08em] text-[#8A8674]">
+              Recovery only
+            </summary>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ActionButton
+                label="Let teams save again"
+                disabled={!selected || !canReopen(selected) || busy}
+                onClick={() => setConfirm("reopen")}
+              />
+              <ActionButton
+                label="Abandon round"
+                danger
+                disabled={!selected || !canVoid(selected.status) || busy}
+                onClick={() => setConfirm("void")}
+              />
+              <ActionButton
+                label="Restore abandoned round"
+                disabled={!selected || !canRestore(selected.status) || busy}
+                onClick={() => setConfirm("restore")}
+              />
+              <ActionButton
+                label="Reset play data"
+                danger
+                disabled={busy}
+                onClick={() => {
+                  setResetPhrase("");
+                  setConfirm("reset");
+                }}
+              />
+            </div>
+          </details>
           <p className="text-[0.68rem] leading-5 text-[#8A8674]">
-            Role checks run on the server. Opening stamps 18 minutes. Add 5 minutes only while open.
-            Reopen is only for an unpublished lock. Restore returns a voided round to scheduled.
-            Published rounds cannot be reopened or voided.
+            Automatic mode still needs a server ping each minute (Vercel Cron with a secret, or this
+            page left open). If a step fails, automatic progress stops. Do not void or restore during
+            a healthy live round.
           </p>
         </section>
       </main>
 
-      {confirm && selected ? (
+      {confirm === "reset" ? (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={() => !busy && setConfirm(null)} />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Reset play data"
+            className="relative w-full max-w-md border border-[#B89A60]/30 bg-[#0F1613] p-5"
+          >
+            <h2 className="font-serif text-xl text-[#EDE8D9]">Reset all play data?</h2>
+            <p className="mt-3 text-[0.84rem] leading-6 text-[#C9C2AD]">
+              This deletes submissions, town states, published results, process runs, and lock
+              captures. Teams, members, logins, and the catalogue stay. Rounds return to scheduled
+              with starting credits. Type {RESET_PLAY_CONFIRM} to continue.
+            </p>
+            <input
+              value={resetPhrase}
+              onChange={(event) => setResetPhrase(event.target.value)}
+              className="mt-4 w-full border border-white/10 bg-[#0B0F0D] px-3 py-2 text-[0.84rem] text-[#E3DCC8]"
+              placeholder={RESET_PLAY_CONFIRM}
+              autoComplete="off"
+            />
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirm(null)}
+                className="flex-1 border border-white/10 px-3 py-2 text-[0.76rem] text-[#C9C2AD] hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busy || resetPhrase.trim() !== RESET_PLAY_CONFIRM}
+                onClick={() => void resetPlay()}
+                className="flex-1 border border-[#C0533E]/70 bg-[#5A241C] px-3 py-2 text-[0.76rem] uppercase tracking-[0.08em] text-[#F0D8D3] hover:bg-[#6B2C22] disabled:opacity-50"
+              >
+                {busy ? "Working…" : "Reset play"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : confirm && selected ? (
         <div className="fixed inset-0 z-50 grid place-items-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => !busy && setConfirm(null)} />
           <div
@@ -446,6 +647,54 @@ function ActionButton({
       {label}
     </button>
   );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border border-white/10 px-3 py-2">
+      <dt className="text-[0.58rem] uppercase tracking-[0.12em] text-[#8A8674]">{label}</dt>
+      <dd className="mt-1 font-serif text-xl tabular-nums text-[#EDE8D9]">{value}</dd>
+    </div>
+  );
+}
+
+function primaryLabel(action: RoomAction, round: RoomRound | null): string {
+  if (action === "open" && round?.status === "published") return "Open next round";
+  if (action === "open" && round?.index === 1) return "Open round 1";
+  if (action === "open") return "Open this round";
+  if (action === "lock") return "Close submissions";
+  if (action === "process") return "Score this round";
+  if (action === "publish") return "Publish results";
+  if (action === "none") return "Waiting";
+  return action;
+}
+
+function operatorHint(round: RoomRound, action: RoomAction, missing: number, mode: string): string {
+  if (round.status === "open") {
+    return `${missing} team${missing === 1 ? "" : "s"} have not saved. When time is up, close submissions — unsaved teams keep a hold. ${mode === "automatic" ? "Automatic mode will close at the deadline." : "You must close submissions yourself unless you start automatic mode."}`;
+  }
+  if (round.status === "locked") {
+    return "Plans are frozen. Score this round next. Nothing is official until you publish.";
+  }
+  if (round.status === "processing") {
+    return action === "publish"
+      ? "Scoring succeeded. Publish to show official results and unlock the next round."
+      : "Scoring is incomplete. Score again. Do not publish until this succeeds.";
+  }
+  if (round.status === "published") {
+    return action === "open"
+      ? "This round is official. Open the next round when the hall is ready."
+      : "All published rounds are on the leaderboard.";
+  }
+  if (round.status === "scheduled") {
+    return action === "open"
+      ? "This round is waiting. Opening starts the 18-minute clock."
+      : "The previous round must be published before this one can open.";
+  }
+  if (round.status === "void") {
+    return "This round was abandoned. Restore it before continuing the same year.";
+  }
+  return "Refresh if this does not match what you just did.";
 }
 
 function labelStatus(status: string): string {

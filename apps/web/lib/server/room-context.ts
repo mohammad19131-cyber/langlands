@@ -8,10 +8,12 @@ import {
   publicManifest,
   type ProcessRunView,
   type RoomRound,
+  type RoomMember,
   type RoomSeat,
   type RoomSubmissionRef,
   type RoomTeam,
 } from "../room-ops";
+import { officialCredits, STARTING_RESERVE_FALLBACK } from "../admin-ops";
 import { createServerSupabase } from "../supabase/server";
 import { createServiceRoleClient } from "../supabase/admin";
 
@@ -99,20 +101,39 @@ export async function loadRoomContext(): Promise<RoomContext> {
   } | null;
   const rawRounds = (roundRows as RoundRow[] | null) ?? [];
   const roundIds = rawRounds.map((row) => row.id);
-  const [{ data: submissionRows }, { data: runRows }] = roundIds.length
-    ? await Promise.all([
-        admin
-          .from("submissions")
-          .select("round_id, team_id, status")
-          .in("round_id", roundIds)
-          .in("status", ["accepted", "late"]),
-        admin
-          .from("round_process_runs")
-          .select("round_id, attempt, ok, checksum, error, engine_version, finished_at")
-          .in("round_id", roundIds)
-          .order("attempt", { ascending: false }),
-      ])
-    : [{ data: [] }, { data: [] }];
+  const publishedRoundIds = rawRounds.filter((row) => row.status === "published").map((row) => row.id);
+  const teamIds = ((teamRows as Array<{ id: string }> | null) ?? []).map((row) => row.id);
+  const [{ data: submissionRows }, { data: runRows }, { data: templateRow }, { data: resultRows }, { data: memberRows }] =
+    await Promise.all([
+      roundIds.length
+        ? admin
+            .from("submissions")
+            .select("round_id, team_id, status")
+            .in("round_id", roundIds)
+            .in("status", ["accepted", "late"])
+        : Promise.resolve({ data: [] as Array<{ round_id: string; team_id: string; status: string }> }),
+      roundIds.length
+        ? admin
+            .from("round_process_runs")
+            .select("round_id, attempt, ok, checksum, error, engine_version, finished_at")
+            .in("round_id", roundIds)
+            .order("attempt", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      admin
+        .from("town_templates")
+        .select("initial_state")
+        .eq("competition_id", competitionId)
+        .maybeSingle(),
+      publishedRoundIds.length
+        ? admin
+            .from("published_results")
+            .select("team_id, round_index, reserve")
+            .in("round_id", publishedRoundIds)
+        : Promise.resolve({ data: [] as Array<{ team_id: string; round_index: number; reserve: number }> }),
+      teamIds.length
+        ? admin.from("team_members").select("team_id, user_id, member_role").in("team_id", teamIds)
+        : Promise.resolve({ data: [] as Array<{ team_id: string; user_id: string; member_role: "captain" | "member" }> }),
+    ]);
 
   const lastRunByRound = new Map<string, ProcessRunView>();
   for (const row of (runRows as Array<{
@@ -159,6 +180,50 @@ export async function loadRoomContext(): Promise<RoomContext> {
     status: row.status,
   }));
 
+  const startingReserve = Number(
+    (templateRow as { initial_state?: { reserve?: number } } | null)?.initial_state?.reserve,
+  );
+  const reserveByTeam = new Map<string, { roundIndex: number; reserve: number }>();
+  for (const row of (resultRows as Array<{
+    team_id: string;
+    round_index: number;
+    reserve: number | string;
+  }> | null) ?? []) {
+    const current = reserveByTeam.get(row.team_id);
+    if (!current || Number(row.round_index) > current.roundIndex) {
+      reserveByTeam.set(row.team_id, {
+        roundIndex: Number(row.round_index),
+        reserve: Number(row.reserve),
+      });
+    }
+  }
+
+  const rawMembers = (memberRows as Array<{
+    team_id: string;
+    user_id: string;
+    member_role: "captain" | "member";
+  }> | null) ?? [];
+  const memberUserIds = [...new Set(rawMembers.map((row) => row.user_id))];
+  const { data: profileRows } = memberUserIds.length
+    ? await admin.from("profiles").select("id, display_name").in("id", memberUserIds)
+    : { data: [] as Array<{ id: string; display_name: string }> };
+  const nameByUser = new Map(
+    ((profileRows as Array<{ id: string; display_name: string }> | null) ?? []).map((row) => [
+      row.id,
+      row.display_name,
+    ]),
+  );
+  const membersByTeam = new Map<string, RoomMember[]>();
+  for (const row of rawMembers) {
+    const list = membersByTeam.get(row.team_id) ?? [];
+    list.push({
+      userId: row.user_id,
+      displayName: nameByUser.get(row.user_id) ?? "Member",
+      memberRole: row.member_role,
+    });
+    membersByTeam.set(row.team_id, list);
+  }
+
   const teams: RoomTeam[] = (
     (teamRows as Array<{
       id: string;
@@ -167,13 +232,22 @@ export async function loadRoomContext(): Promise<RoomContext> {
       login_id: string | null;
       disqualified: boolean;
     }> | null) ?? []
-  ).map((team) => ({
-    seat: team.seat,
-    teamId: team.id,
-    name: team.name,
-    loginId: team.login_id,
-    disqualified: team.disqualified,
-  }));
+  ).map((team) => {
+    const money = officialCredits({
+      startingReserve: Number.isFinite(startingReserve) ? startingReserve : STARTING_RESERVE_FALLBACK,
+      publishedReserve: reserveByTeam.get(team.id)?.reserve ?? null,
+    });
+    return {
+      seat: team.seat,
+      teamId: team.id,
+      name: team.name,
+      loginId: team.login_id,
+      disqualified: team.disqualified,
+      credits: money.credits,
+      creditsSource: money.source,
+      members: membersByTeam.get(team.id) ?? [],
+    };
+  });
 
   const seats = buildSeatsForRound({
     teams,

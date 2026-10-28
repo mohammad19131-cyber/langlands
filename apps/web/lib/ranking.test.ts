@@ -118,7 +118,7 @@ describe("publication gating and ranking", () => {
     expect(formatScore(missing?.rankingScore)).toBe("—");
   });
 
-  it("tie-breaks higher ecology then lower seat, never a fabricated rule", () => {
+  it("tie-breaks higher ecology, then lower mean event damage, then lower seat", () => {
     expect(
       compareOfficial(
         { seat: 2, rankingScore: 50, ecology: 40 },
@@ -127,8 +127,14 @@ describe("publication gating and ranking", () => {
     ).toBeGreaterThan(0);
     expect(
       compareOfficial(
-        { seat: 1, rankingScore: 50, ecology: 40 },
-        { seat: 8, rankingScore: 50, ecology: 40 },
+        { seat: 2, rankingScore: 50, ecology: 40, meanDamage: 10 },
+        { seat: 1, rankingScore: 50, ecology: 40, meanDamage: 20 },
+      ),
+    ).toBeLessThan(0);
+    expect(
+      compareOfficial(
+        { seat: 1, rankingScore: 50, ecology: 40, meanDamage: 12 },
+        { seat: 8, rankingScore: 50, ecology: 40, meanDamage: 12 },
       ),
     ).toBeLessThan(0);
 
@@ -144,6 +150,46 @@ describe("publication gating and ranking", () => {
     if (!built.ok) return;
     expect(built.seats.find((row) => row.seat === 3)?.rank).toBe(1);
     expect(built.seats.find((row) => row.seat === 8)?.rank).toBe(2);
+  });
+
+  it("uses persisted meanDamage when score and ecology match, and skips that step when it is missing", () => {
+    const withDamage = boardForRound({
+      roundStatus: "published",
+      teams: teams(),
+      results: [
+        { seat: 8, name: "B", snapshot: 50, final: 50, breakdown: { ...breakdown(40), meanDamage: 9.5 } },
+        { seat: 3, name: "A", snapshot: 50, final: 50, breakdown: { ...breakdown(40), meanDamage: 18.2 } },
+      ],
+    });
+    expect(withDamage.ok).toBe(true);
+    if (!withDamage.ok) return;
+    expect(withDamage.seats.find((row) => row.seat === 8)?.rank).toBe(1);
+    expect(withDamage.seats.find((row) => row.seat === 3)?.rank).toBe(2);
+    expect(withDamage.seats.find((row) => row.seat === 8)?.meanDamage).toBe(9.5);
+
+    const missingOne = boardForRound({
+      roundStatus: "published",
+      teams: teams(),
+      results: [
+        { seat: 8, name: "B", snapshot: 50, final: 50, breakdown: { ...breakdown(40), meanDamage: 9.5 } },
+        { seat: 3, name: "A", snapshot: 50, final: 50, breakdown: breakdown(40) },
+      ],
+    });
+    expect(missingOne.ok).toBe(true);
+    if (!missingOne.ok) return;
+    expect(missingOne.seats.find((row) => row.seat === 3)?.rank).toBe(1);
+    expect(missingOne.seats.find((row) => row.seat === 8)?.rank).toBe(2);
+    expect(missingOne.seats.find((row) => row.seat === 3)?.meanDamage).toBeNull();
+  });
+
+  it("does not invent a mean-damage default of zero when both sides lack the field", () => {
+    expect(
+      compareOfficial(
+        { seat: 5, rankingScore: 40, ecology: 30, meanDamage: null },
+        { seat: 2, rankingScore: 40, ecology: 30, meanDamage: null },
+      ),
+    ).toBeGreaterThan(0);
+    expect(parseBreakdown({ ...breakdown(33.2, 41.5), meanDamage: 12.5 })?.ecology).toBe(33.2);
   });
 
   it("removes disqualified teams from ranking but still lists the seat", () => {

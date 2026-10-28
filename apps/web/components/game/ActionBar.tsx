@@ -135,15 +135,15 @@ export function ActionBar({
 
           <div className="flex flex-col items-end leading-none">
             <span className="text-[0.58rem] uppercase tracking-[0.12em] text-[#8A8674]">
-              {stagedStarts.length}/2 starts · {Math.round(cost)} cr projects ·{" "}
-              {Math.round(allocated)} cr sectors
+              {stagedStarts.length} of 2 projects · {Math.round(cost)} cr · sectors{" "}
+              {Math.round(allocated)} cr
             </span>
             <span
               className={`mt-1 text-[0.8rem] tabular-nums ${overBudget ? "text-[#C0533E]" : "text-[#EDE8D9]"}`}
             >
               {overBudget
                 ? "Over available credits"
-                : `${Math.round(ctx.budget.available)} cr available · ${Math.round(free)} cr to reserve`}
+                : `${Math.round(ctx.budget.available)} available · ${Math.round(Math.max(0, free))} to reserve`}
             </span>
           </div>
 
@@ -174,10 +174,13 @@ export function ActionBar({
         </div>
 
         <p className="text-[0.66rem] leading-4 text-[#9A947F]">
-          {ctx.mode === "live" && roundOpen
-            ? "Edits save automatically after you pause. The control reads saved only after the server accepts."
+            {ctx.mode === "live" && roundOpen
+            ? dirty
+              ? "Unsaved changes. They save after a short pause, or press Save now."
+              : saveIsConfirmed
+                ? "This plan is saved on the server."
+                : "Choose up to two projects and split remaining credits across sectors, then save."
             : saveLabel}
-          {saveIsConfirmed ? " Current plan is on the server." : null}
         </p>
         {holdNotice && !submitMessage ? (
           <p role="status" className="text-[0.72rem] leading-5 text-[#D9B15A]">

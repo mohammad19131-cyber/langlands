@@ -17,9 +17,9 @@ Editorial, cartographic, quiet. Deep ink, paper, one bronze/green accent. No gam
 | `/play` | team | Map + five category bars + countdown |
 | `/play/decide` | team | Sectors, interventions, save |
 | `/play/history` | team | Own published rounds |
-| `/board` | team after publish, judge, organiser | 20-team pillars |
+| `/board` | organiser | 20-team pillars after publish. Delegates cannot access. |
 | `/rules` | signed-in | Frozen rulebook |
-| `/room` | organiser | Control room |
+| `/room` | organiser | Control room: rounds, 20-seat credits, team/member names, reset play |
 | `/room/team/[seat]` | organiser | Support view (audited) |
 | `/judge` | judge | Read-only outcomes |
 
@@ -139,6 +139,9 @@ export type SubmissionResult =
 | `loadPlay()` | team | `{ clock, town: TownPrivate, catalogue, unofficialPreview }` |
 | `loadBoard()` | signed-in | 20 × `TownPublic` only if round published; else 409 |
 | `organiserLock/Process/Publish` | organiser | round status |
+| `organiserResetPlay` | organiser | confirm `RESET PLAY`; teams/members kept |
+| `organiserUpdateTeam` | organiser | team display name |
+| `organiserUpdateMember` | organiser | member display name and captain/member role |
 
 No `setScore`, no `setReserve`, no `setNow`.
 

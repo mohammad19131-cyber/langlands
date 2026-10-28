@@ -11,6 +11,7 @@ import { createServerSupabase } from "../../../../../lib/supabase/server";
 import { requireConfigured, requireTeamMember, requireUser } from "../../../../../lib/server/authz";
 import { jsonError } from "../../../../../lib/server/json";
 import { loadPreTownForTeam } from "../../../../../lib/server/load-town";
+import { humanizeSubmitError } from "../../../../../lib/decision";
 import { submissionClosedMessage } from "../../../../../lib/submission-closed";
 
 export const runtime = "nodejs";
@@ -122,9 +123,10 @@ export async function POST(
     _client_claimed_at: proposal.clientClaimedAt,
   });
   if (error) {
-    if (/conflict/i.test(error.message)) return jsonError(409, "conflict", error.message);
-    if (/unauthorized/i.test(error.message)) return jsonError(403, "unauthorized");
-    return jsonError(400, "invalid", error.message);
+    const safe = humanizeSubmitError(error.message);
+    if (/conflict/i.test(error.message)) return jsonError(409, "conflict", safe);
+    if (/unauthorized/i.test(error.message)) return jsonError(403, "unauthorized", safe);
+    return jsonError(400, "invalid", safe);
   }
   const result = data as { ok?: boolean; status?: string; error?: string; id?: string };
   if (!result?.ok) {

@@ -66,7 +66,7 @@ export type PublicResultRow = {
   energyMix: "thermal-heavy" | "mixed" | "clean-leaning";
   agriculture: "intensive" | "mixed" | "regenerative";
   industry: "light" | "heavy";
-  scoreBreakdown: Snapshot;
+  scoreBreakdown: Snapshot & { meanDamage: number };
   snapshotScore: number;
   finalScore: number;
   engineVersion: string;
@@ -76,7 +76,7 @@ export type TownStateRow = {
   teamId: string;
   roundIndex: number;
   state: Town;
-  scoreBreakdown: Snapshot;
+  scoreBreakdown: Snapshot & { meanDamage: number };
   snapshotScore: number;
   finalScore: number;
   engineVersion: string;

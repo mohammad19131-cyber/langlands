@@ -9,6 +9,7 @@ import {
   canVoid,
   currentRoomRound,
   deriveSeatStatus,
+  holdCount,
   missingCount,
   nextRoomAction,
   predecessorPublished,
@@ -43,6 +44,9 @@ const twentyTeams: RoomTeam[] = Array.from({ length: 20 }, (_, i) => ({
   name: `Seat ${String(i + 1).padStart(2, "0")}`,
   loginId: `T${String(i + 1).padStart(2, "0")}`,
   disqualified: false,
+  credits: 220,
+  creditsSource: "starting",
+  members: [],
 }));
 
 describe("pre-event scheduled field", () => {
@@ -98,6 +102,8 @@ describe("round transitions", () => {
     ).toBe("publish");
     const published = round({ index: 1, status: "published", processChecksum: "abc" });
     expect(nextRoomAction({ round: published, rounds: [published] })).toBe("none");
+    const r2 = round({ index: 2, status: "scheduled" });
+    expect(nextRoomAction({ round: published, rounds: [published, r2] })).toBe("open");
     expect(canVoid("published")).toBe(false);
     expect(canVoid("open")).toBe(true);
     expect(canExtend("open")).toBe(true);
@@ -204,6 +210,25 @@ describe("seat status and missing submissions", () => {
     ).toBe(1);
   });
 
+  it("does not treat unsaved open-round seats as official holds", () => {
+    const r1 = round({ index: 1, status: "open", id: "r1" });
+    const submissions = [{ roundId: "r1", teamId: "team-01", status: "accepted" }];
+    const openSeats = buildSeatsForRound({ teams: twentyTeams, round: r1, submissions, manifest: [] });
+    expect(holdCount(openSeats)).toBe(0);
+    expect(missingCount(openSeats)).toBe(19);
+    const locked = round({ index: 1, status: "locked", id: "r1" });
+    const lockedSeats = buildSeatsForRound({
+      teams: twentyTeams,
+      round: locked,
+      submissions,
+      manifest: [
+        { seat: 1, teamName: "Seat 01", disqualified: false, held: false },
+        { seat: 2, teamName: "Seat 02", disqualified: false, held: true },
+      ],
+    });
+    expect(holdCount(lockedSeats)).toBe(1);
+  });
+
   it("does not copy an open round's saves onto a later scheduled round", () => {
     const r1 = round({ index: 1, status: "open", id: "r1" });
     const r2 = round({ index: 2, status: "scheduled", id: "r2" });
@@ -247,6 +272,8 @@ describe("lock manifest privacy and checksum recovery", () => {
     expect(recoveryGuidance("predecessor not published")).toMatch(/restore the voided round/i);
     expect(recoveryGuidance("cannot restore")).toMatch(/unpublished voided round/i);
     expect(recoveryGuidance("unauthorized")).toBe("Not available.");
+    expect(recoveryGuidance("Scoring did not finish. Retrying process once.")).toMatch(/Stay unpublished/i);
+    expect(recoveryGuidance("No safe next step. Use the manual controls.")).toMatch(/Do not void/i);
   });
 
   it("routes organiser actions through the existing round APIs", () => {

@@ -348,7 +348,7 @@ describe("Phase 2 isolation (PGlite + stub auth)", () => {
     ).rejects.toThrow();
   });
 
-  it("published leaderboard rows contain only TownPublic fields", async () => {
+  it("published result rows contain only TownPublic fields and hide rival teams", async () => {
     const cols = await db.query<{ column_name: string }>(`
       select column_name from information_schema.columns
       where table_schema = 'public' and table_name = 'published_results'
@@ -378,14 +378,12 @@ describe("Phase 2 isolation (PGlite + stub auth)", () => {
       );
     `);
 
-    const publicRow = await asUser(db, USER_A, () =>
+    const rivalRow = await asUser(db, USER_A, () =>
       db.query<Record<string, unknown>>(
         `select * from public.published_results where team_id = '${teamB}'`,
       ),
     );
-    expect(publicRow.rows.length).toBe(1);
-    expect(publicRow.rows[0].team_seat).toBe(2);
-    expect(publicRow.rows[0]).not.toHaveProperty("state");
+    expect(rivalRow.rows.length).toBe(0);
 
     const privateRow = await asUser(db, USER_A, () =>
       db.query<{ n: number }>(

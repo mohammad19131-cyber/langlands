@@ -8,7 +8,6 @@ import type { SessionState } from "../lib/session";
 const NAV = [
   { href: "/rules", label: "Field guide" },
   { href: "/play", label: "Play" },
-  { href: "/board", label: "Board" },
 ];
 
 export function SiteHeader({

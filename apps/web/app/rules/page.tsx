@@ -161,8 +161,7 @@ export default function RulesPage() {
           </p>
           <ol className="mt-3 list-decimal space-y-2 pl-5 font-sans text-sm leading-7 text-mist-bright">
             <li>
-              Inspect the published state of their town (and, after round 1, published pillar scores
-              of others).
+              Inspect the published state of their own town. The 20-town board is organiser-only.
             </li>
             <li>Split available credits across eight operating sectors.</li>
             <li>Optionally start up to {MAX_STARTS} interventions from the catalogue.</li>
@@ -204,8 +203,9 @@ export default function RulesPage() {
               checked against the town as it stood at the start of the round.
             </li>
             <li>
-              Teams never see another team’s allocations or intervention queue during the event.
-              After a round is published they see others’ pillar scores and public map tiles only.
+              Teams never see another team’s allocations, intervention queue, unpublished scores, or
+              the 20-town board. After a round is published they see their own official pillar scores
+              and own town. Official standings are organiser-only.
             </li>
             <li>
               Saving the same plan twice is safe. Changing a saved plan while the round is still

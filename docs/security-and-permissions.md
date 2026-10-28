@@ -1,6 +1,6 @@
 # Security and permissions
 
-Status: canonical. Matches `docs/schema.sql` plus `0002`–`0011`. Isolation, round-machine, and rehearsal tests: `npm run test:db` (PGlite, locally verified). Hosted re-test is still required after `supabase db push`. Do not apply these migrations to a live competition from an agent session.
+Status: canonical. Matches `docs/schema.sql` plus `0002`–`0014`. Isolation, round-machine, and rehearsal tests: `npm run test:db` (PGlite, locally verified). Hosted re-test is still required after `supabase db push`. Do not apply these migrations to a live competition from an agent session.
 
 ## Trust boundary
 
@@ -34,7 +34,8 @@ There is no “admin edits the score” role.
 | Read own town | yes | yes | yes | yes |
 | Write allocations / starts | yes | yes | no | no |
 | Read rival live submission | no | no | no | yes, audited |
-| Read rival published pillars | after publish | after publish | yes | yes |
+| Read own published pillars | after publish | after publish | yes | yes |
+| Read rival published pillars | no | no | after publish | after publish |
 | Open / lock / process / publish | no | no | no | yes |
 | Change `closes_at` | no | no | no | only while `open` |
 | Disqualify | no | no | note only | yes |
@@ -46,7 +47,7 @@ There is no “admin edits the score” role.
 - `submissions_team_read`: own team or **organiser** (not judge).
 - `rounds.lock_manifest`: public seat summary only. Full allocations live in `round_lock_private` (no browser GRANT; no RLS policies). Column revoke on the old field remains for hosted Postgres. Organiser lock HTTP returns the seat summary, not allocations. Official publish recomputes from `round_lock_private`, never from the public column.
 - `town_states`: own team or organiser. Rivals never. Judges never.
-- `published_results`: same-competition participants, judges, and organisers, and only when `rounds.status = 'published'`.
+- `published_results`: own team after `rounds.status = 'published'`, or organiser/judge of that competition. Not a public leaderboard. `0014` replaces the Phase 2 participant-wide SELECT. Hosted apply of `0014` is a dashboard step, not verified from this session.
 - `town_states` / `published_results` insert/update/delete **revoked** from `authenticated`.
 - `audit_logs` insert revoked from `authenticated`; organisers select.
 - Profile update cannot change `role` (column grant + trigger). Signup always inserts `member`.
@@ -74,6 +75,7 @@ Next.js still checks session and team on every action so error messages are clea
 ## Isolation tests that must exist
 
 - Team A `select` on team B submission → 0 rows. **Done locally** (`npm run test:db`).
+- Team A `select` on team B `published_results` after publish → 0 rows; own published row remains readable. Organiser/judge of that competition still read published TownPublic rows. Unauthenticated denied. **Done locally** (`published-results-privacy.test.ts`). Hosted PostgREST with a rival JWT is **NOT VERIFIED**.
 - Rewound client clock cannot insert after `closes_at`. **Done locally**.
 - Two members concurrent save → one `accepted`. Unique index plus `submit_decision` supersede. Parallel HTTP against hosted Postgres is unrun.
 - `authenticated` insert into `town_states` fails. **Done locally**.
@@ -88,6 +90,7 @@ Qualified **Team ID** (e.g. `004`) **and password**. No Google, no magic-link, n
 - `teams.login_id` is the public username; `teams.id` stays the internal UUID.
 - Only bcrypt hashes are stored in `teams.password_hash`. `authenticated` has column SELECT on public team fields only (`0004` table GRANT plus `0012`); `anon` has no `teams` privilege. A column `REVOKE` alone does not hide a hash after table-level `GRANT SELECT`.
 - Night-before provisioning (`POST /api/admin/provision-teams` with `TEAM_PROVISION_SECRET` or an organiser session) assigns the 20 qualified IDs to seats 1–20 in list order, generates unique passwords, and returns a one-time CSV for distribution.
+- Organiser play reset (`POST /api/admin/reset-play`) and team/member name edits (`PATCH /api/admin/teams/:id`) are Next.js session checks then service-role RPCs. Participants cannot execute those functions. GET on those routes does not mutate. Reset deletes play history; it does not edit published scores in place.
 - Login verifies the hash server-side, then establishes a Supabase Auth session so `auth.uid()`, RLS, and `submit_decision` remain unchanged. Opaque Auth identities are never shown in the player UI.
 - Gameplay APIs authorize from session `team_members`, never from a client-supplied Team ID.
 

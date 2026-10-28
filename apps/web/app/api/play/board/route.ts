@@ -1,3 +1,4 @@
+import { mayReadOfficialBoard } from "../../../../lib/board-access";
 import { requireConfigured, requireUser } from "../../../../lib/server/authz";
 import { jsonError } from "../../../../lib/server/json";
 import {
@@ -27,6 +28,9 @@ export async function GET(request: Request) {
   const admin = createServiceRoleClient();
   const access = await resolveCompetitionAccess(admin, authed.user.userId);
   if (!access.ok) return jsonError(403, "unauthorized");
+  if (!mayReadOfficialBoard(access.isOrganiser)) {
+    return jsonError(403, "forbidden", "Official standings are organiser-only.");
+  }
 
   const { data: roundRows } = await admin
     .from("rounds")

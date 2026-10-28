@@ -62,8 +62,8 @@ export function publicPlayContext(ctx: GameContext): GameContext {
           status: String(ctx.submission.status),
         }
       : null,
-    leaderboard: ctx.leaderboard,
-    boardByRound: ctx.boardByRound,
+    leaderboard: ctx.isOrganiser ? ctx.leaderboard : null,
+    boardByRound: ctx.isOrganiser ? ctx.boardByRound : {},
     ownHistory: ctx.ownHistory,
     publishedRoundIndex: ctx.publishedRoundIndex,
     publishedRounds: [...ctx.publishedRounds],

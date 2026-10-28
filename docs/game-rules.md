@@ -14,7 +14,7 @@ Status: canonical player-facing rules. Coefficients live in `simulation-model.md
 
 While the round status is `open`:
 
-1. Inspect the published state of their town (and, after round 1, published pillar scores of others).
+1. Inspect the published state of their own town. The 20-town board is organiser-only.
 2. Split **available credits** across eight operating sectors.
 3. Optionally start up to **two** interventions from the catalogue.
 4. Save as often as they like. The last **accepted** server write before `closes_at` counts.
@@ -92,7 +92,7 @@ This is explicit neglect, not a bye. Drift, events, and maintenance still run.
 
 ## 8. Isolation
 
-Teams never see another team’s allocations or intervention queue during the event. After each round is `published` they see others’ **pillar scores and public map tiles** only.
+Teams never see another team’s allocations, intervention queue, unpublished scores, or the 20-town board. After each round is `published` they see their **own** official pillar scores and own town. Official standings are organiser-only.
 
 ## 9. Ranking
 
