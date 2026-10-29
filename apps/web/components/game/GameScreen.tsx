@@ -311,7 +311,7 @@ export function GameScreen({
             />
           </div>
           <div className="game-vignette pointer-events-none absolute inset-0" />
-          <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 border border-[#B89A60]/20 bg-black/40 px-3 py-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#B8B2A0] backdrop-blur">
+          <div className="pointer-events-none absolute bottom-1 left-1/2 -translate-x-1/2 border border-[#B89A60]/20 bg-black/40 px-3 py-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#B8B2A0] backdrop-blur">
             {ctx.town.label}
           </div>
           {statusBanner ? (
@@ -425,12 +425,7 @@ export function GameScreen({
 
 function bannerFor(ctx: GameContext, status: string, deadlinePassed: boolean): string | null {
   if (deadlinePassed) return "Deadline passed. Waiting for results.";
-  if (status === "open") return null;
-  if (status === "scheduled") {
-    return ctx.round?.opensAt
-      ? `Round ${ctx.round.index} opens at ${new Date(ctx.round.opensAt).toLocaleString()}. Controls stay closed until then.`
-      : (ctx.notice ?? "The next round has not opened yet.");
-  }
+  if (status === "open" || status === "scheduled") return null;
   if (ctx.mode === "preview") return ctx.notice;
   return ctx.notice;
 }

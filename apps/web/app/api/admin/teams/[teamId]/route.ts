@@ -1,6 +1,7 @@
 import { parseTeamName } from "../../../../../lib/admin-ops";
 import { requireConfigured, requireOrganiser, requireUser } from "../../../../../lib/server/authz";
 import { jsonError } from "../../../../../lib/server/json";
+import { renameTeam } from "../../../../../lib/server/organiser-writes";
 import { createServiceRoleClient } from "../../../../../lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -32,19 +33,20 @@ export async function PATCH(
   if (!name) return jsonError(400, "invalid", "Team name must be 2–60 characters.");
 
   const admin = createServiceRoleClient();
-  const { data: team } = await admin.from("teams").select("id, competition_id").eq("id", teamId).maybeSingle();
+  const { data: team } = await admin
+    .from("teams")
+    .select("id, competition_id")
+    .eq("id", teamId)
+    .maybeSingle();
   if (!team) return jsonError(404, "invalid", "unknown team");
   if (!(await requireOrganiser(authed.user.userId, team.competition_id))) {
     return jsonError(403, "unauthorized");
   }
 
-  const { data, error } = await admin.rpc("organiser_update_team", {
-    _team_id: teamId,
-    _actor: authed.user.userId,
-    _name: name,
-  });
-  if (error) {
-    return jsonError(/unauthorized/i.test(error.message) ? 403 : 400, "invalid", error.message);
+  const result = await renameTeam(admin, teamId, authed.user.userId, name);
+  if (!result.ok) {
+    const status = /unauthorized/i.test(result.message) ? 403 : 400;
+    return jsonError(status, "invalid", result.message);
   }
-  return Response.json({ ok: true, result: data });
+  return Response.json({ ok: true, result: result.result });
 }

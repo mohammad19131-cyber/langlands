@@ -110,11 +110,11 @@ Tick JSON is sanitized (`noop` / `status` / `checksum` / `idempotent`). No lock 
 | Method | Path | Who | Behaviour |
 | --- | --- | --- | --- |
 | `POST` | `/api/admin/provision-teams` | Bearer provision secret or organiser | Assign 20 Team IDs; one-time CSV of passwords |
-| `POST` | `/api/admin/reset-play` | organiser | Body `{ confirm: "RESET PLAY" }`. Deletes play history; keeps teams/members/credentials. Requires migration `0015`. |
+| `POST` | `/api/admin/reset-play` | organiser | Body `{ confirm: "RESET PLAY" }`. Calls transactional RPC `reset_competition_play` (migration `0015`). Returns **503** if the RPC is missing. Keeps teams/members/credentials; restores reserve **220**. |
 | `GET` | `/api/admin/reset-play` | — | **405** |
-| `PATCH` | `/api/admin/teams/:teamId` | organiser | Rename team (`{ name }`). Requires `0015`. |
+| `PATCH` | `/api/admin/teams/:teamId` | organiser | Rename team (`{ name }`) via RPC `organiser_update_team`. Does not change login or password. |
 | `GET` | `/api/admin/teams/:teamId` | — | **405** |
-| `PATCH` | `/api/admin/teams/:teamId/members/:userId` | organiser | `{ displayName, memberRole? }`. Requires `0015`. |
+| `PATCH` | `/api/admin/teams/:teamId/members/:userId` | organiser | `{ displayName, memberRole? }` via RPC `organiser_update_team_member`. |
 | `GET` | `/api/admin/teams/:teamId/members/:userId` | — | **405** |
 
 ---
@@ -129,6 +129,7 @@ Tick JSON is sanitized (`noop` / `status` / `checksum` / `idempotent`). No lock 
 | `run-process.ts` | Official process entry |
 | `event-tick.ts` | Scheduler step |
 | `provision-teams.ts` | Night-before IDs + bcrypt |
+| `organiser-writes.ts` | Service-role RPC wrappers for reset / team / member edit |
 | `published-board.ts` | Organiser board rows |
 | `load-town.ts` | Pre-round / published town load |
 | `json.ts` | Error helpers |
@@ -143,7 +144,7 @@ Supporting pure helpers (safe to unit-test): `event-tick-plan.ts`, `event-tick-a
 Applied via `supabase/migrations` (service role after Next.js auth check):
 
 - `submit_decision`, `open_round`, `lock_round`, `claim_process`, `save_process_run`, `publish_round`, `void_round`, `restore_voided_round`, `set_round_window`, `reopen_round`, `audit_append`
-- `0015`: `reset_competition_play`, `organiser_update_team`, `organiser_update_team_member`
+- `0015` defines the same reset/rename as SQL functions. The admin routes do **not** call them, so a missing schema-cache entry does not block `/room`.
 
 RLS: captains never read rival submissions / `town_states` / private locks. `0014` restricts participant `published_results` to own team (must be applied on hosted before relying on PostgREST privacy).
 

@@ -87,6 +87,26 @@ begin
          current_round_index = 0
    where id = _competition;
 
+  -- Credits are town_templates.initial_state.reserve until a round is published.
+  -- Force that field back to STARTING_RESERVE (220) from packages/sim after clearing play rows.
+  if not exists (
+    select 1 from public.town_templates where competition_id = _competition
+  ) then
+    raise exception 'town template missing' using errcode = 'P0001';
+  end if;
+
+  update public.town_templates
+     set initial_state = jsonb_set(coalesce(initial_state, '{}'::jsonb), '{reserve}', '220'::jsonb, true)
+   where competition_id = _competition;
+
+  if (
+    select (initial_state->>'reserve')::numeric
+      from public.town_templates
+     where competition_id = _competition
+  ) is distinct from 220::numeric then
+    raise exception 'town template reserve was not reset to 220' using errcode = 'P0001';
+  end if;
+
   insert into public.audit_logs (actor_id, competition_id, team_id, action, payload)
   values (
     _actor,
@@ -98,7 +118,8 @@ begin
       'town_states', town_n,
       'published_results', pub_n,
       'process_runs', run_n,
-      'lock_private', lock_n
+      'lock_private', lock_n,
+      'reserve', 220
     )
   );
 
@@ -118,6 +139,7 @@ begin
     'status', 'ready',
     'teams', team_n,
     'members', member_n,
+    'reserve', 220,
     'deleted', jsonb_build_object(
       'submissions', sub_n,
       'town_states', town_n,

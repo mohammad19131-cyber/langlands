@@ -244,12 +244,20 @@ export function ControlRoom({ initial }: { initial: LiveRoom }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirm: resetPhrase.trim() }),
       });
-      const data = (await res.json().catch(() => ({}))) as { ok?: boolean; message?: string; error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        error?: string;
+        result?: { reserve?: number };
+      };
       if (!res.ok || data.ok === false) {
         setError(data.message || data.error || `Reset failed (${res.status})`);
         return;
       }
-      setMessage("Play data cleared. Teams and members were kept. Starting credits are 220.");
+      const reserve = typeof data.result?.reserve === "number" ? data.result.reserve : 220;
+      setMessage(
+        `Play data cleared. Teams and members were kept. Town reserve reset to ${reserve} credits.`,
+      );
       setConfirm(null);
       setResetPhrase("");
       router.refresh();

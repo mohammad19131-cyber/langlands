@@ -1,6 +1,7 @@
 import { RESET_PLAY_CONFIRM, resetPlayConfirmed } from "../../../../lib/admin-ops";
 import { requireConfigured, requireOrganiser, requireUser } from "../../../../lib/server/authz";
 import { jsonError } from "../../../../lib/server/json";
+import { resetCompetitionPlay } from "../../../../lib/server/organiser-writes";
 import { createServiceRoleClient } from "../../../../lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -41,12 +42,14 @@ export async function POST(request: Request) {
     return jsonError(403, "unauthorized");
   }
 
-  const { data, error } = await admin.rpc("reset_competition_play", {
-    _competition: competition.id,
-    _actor: authed.user.userId,
-  });
-  if (error) {
-    return jsonError(/unauthorized/i.test(error.message) ? 403 : 409, "invalid", error.message);
+  const result = await resetCompetitionPlay(admin, competition.id, authed.user.userId);
+  if (!result.ok) {
+    const status = /unauthorized/i.test(result.message)
+      ? 403
+      : /not installed|schema cache|could not find the function/i.test(result.message)
+        ? 503
+        : 409;
+    return jsonError(status, "invalid", result.message);
   }
-  return Response.json({ ok: true, result: data });
+  return Response.json({ ok: true, result: result.result });
 }

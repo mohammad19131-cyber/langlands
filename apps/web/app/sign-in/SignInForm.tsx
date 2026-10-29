@@ -80,7 +80,7 @@ export function SignInForm({ initialError = null }: { initialError?: string | nu
         className="block text-[0.62rem] uppercase tracking-[0.16em] text-mist"
         htmlFor="team-id"
       >
-        Team ID or staff email
+        Team ID
       </label>
       <input
         id="team-id"
@@ -95,7 +95,6 @@ export function SignInForm({ initialError = null }: { initialError?: string | nu
         aria-invalid={invalid || undefined}
         aria-describedby={invalid ? errorId : undefined}
         className={`${fieldClass} ${invalid ? "border-state-danger" : "border-gold/30"}`}
-        placeholder="team001 or 004"
       />
 
       <label

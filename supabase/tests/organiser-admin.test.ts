@@ -21,6 +21,8 @@ import {
   openRound as openRoundWindow,
 } from "./harness.ts";
 
+const allocJson = JSON.stringify(EMPTY_ALLOCATIONS);
+
 describe("organiser reset and team edit (PGlite; hosted NOT VERIFIED)", () => {
   let db: PGlite;
   let exec: Executor;
@@ -59,6 +61,13 @@ describe("organiser reset and team edit (PGlite; hosted NOT VERIFIED)", () => {
     expect(member.rows[0].organiser_update_team_member.displayName).toBe("Captain North");
     expect(member.rows[0].organiser_update_team_member.memberRole).toBe("captain");
 
+    const audits = await db.query<{ n: number }>(
+      `select count(*)::int as n from public.audit_logs
+        where competition_id = $1 and action in ('organiser_update_team', 'organiser_update_team_member')`,
+      [competitionId],
+    );
+    expect(audits.rows[0].n).toBeGreaterThanOrEqual(2);
+
     await asUser(db, USER_A, async () => {
       await expect(
         db.query(`select public.organiser_update_team($1::uuid, $2::uuid, $3::text)`, [
@@ -68,6 +77,32 @@ describe("organiser reset and team edit (PGlite; hosted NOT VERIFIED)", () => {
         ]),
       ).rejects.toThrow(/unauthorized|permission denied/i);
     });
+  });
+
+  it("rejects invalid member roles and short names", async () => {
+    await expect(
+      db.query(
+        `select public.organiser_update_team_member($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text)`,
+        [teamA, USER_A, USER_ORG, "Still Valid", "organiser"],
+      ),
+    ).rejects.toThrow(/invalid member role/i);
+
+    await expect(
+      db.query(`select public.organiser_update_team($1::uuid, $2::uuid, $3::text)`, [teamA, USER_ORG, "x"]),
+    ).rejects.toThrow(/invalid team name/i);
+
+    await expect(
+      db.query(
+        `select public.organiser_update_team_member($1::uuid, $2::uuid, $3::uuid, $4::text, $5::text)`,
+        [teamA, USER_A, USER_ORG, "A", "captain"],
+      ),
+    ).rejects.toThrow(/invalid display name/i);
+
+    const role = await db.query<{ member_role: string }>(
+      `select member_role::text from public.team_members where team_id = $1 and user_id = $2`,
+      [teamA, USER_A],
+    );
+    expect(role.rows[0].member_role).toBe("captain");
   });
 
   it("resets play data, keeps teams and members, and restores starting credits", async () => {
@@ -172,6 +207,25 @@ describe("organiser reset and team edit (PGlite; hosted NOT VERIFIED)", () => {
       null,
     ]);
 
+    const audit = await db.query<{ n: number; reserve: number }>(
+      `select count(*)::int as n, max((payload->>'reserve')::numeric) as reserve
+         from public.audit_logs
+        where competition_id = $1 and action = 'reset_competition_play'`,
+      [competitionId],
+    );
+    expect(audit.rows[0].n).toBeGreaterThanOrEqual(1);
+    expect(Number(audit.rows[0].reserve)).toBe(220);
+
+    await db.exec(`
+      update public.town_templates
+         set initial_state = jsonb_set(initial_state, '{reserve}', '61.5'::jsonb)
+       where competition_id = '${competitionId}'
+    `);
+    const resetAgain = await db.query<{ reset_competition_play: { reserve: number } }>(
+      `select public.reset_competition_play($1::uuid, $2::uuid) as reset_competition_play`,
+      [competitionId, USER_ORG],
+    );
+    expect(resetAgain.rows[0].reset_competition_play.reserve).toBe(220);
     const reserve = await db.query<{ reserve: string }>(
       `select initial_state->>'reserve' as reserve from public.town_templates where competition_id = $1`,
       [competitionId],
@@ -183,5 +237,100 @@ describe("organiser reset and team edit (PGlite; hosted NOT VERIFIED)", () => {
         db.query(`select public.reset_competition_play($1::uuid, $2::uuid)`, [competitionId, USER_B]),
       ).rejects.toThrow(/unauthorized|permission denied/i);
     });
+  });
+
+  it("isolates reset from another competition and rolls back on missing template", async () => {
+    const otherId = randomUUID();
+    const otherTeam = randomUUID();
+    const otherRound = randomUUID();
+    const otherSub = randomUUID();
+
+    await db.exec(`
+      insert into public.competitions (
+        id, slug, title, status, rules_version, scenario_pack, engine_version,
+        team_count, round_count, current_round_index, catalogue_hash, created_by
+      ) values (
+        '${otherId}', 'other-comp-isolation', 'Other Comp', 'live', 'A-CAT-1.1', 'A', 'py-ref-1.1.0',
+        20, 6, 1, 'isolation-hash', null
+      );
+      insert into public.town_templates (competition_id, initial_state, published, checksum)
+      values ('${otherId}', '{"reserve":220}'::jsonb, true, 'iso');
+      insert into public.teams (id, competition_id, seat, name, slug)
+      values ('${otherTeam}', '${otherId}', 1, 'Other Team', 'other-team');
+      insert into public.rounds (
+        id, competition_id, round_index, status, opens_at, closes_at, event_code
+      ) values (
+        '${otherRound}', '${otherId}', 1, 'open',
+        now() - interval '1 minute', now() + interval '1 hour', null
+      );
+      insert into public.submissions (
+        id, round_id, team_id, status, allocations, project_starts, idempotency_key, schema_version
+      ) values (
+        '${otherSub}', '${otherRound}', '${otherTeam}', 'accepted',
+        '${allocJson}'::jsonb, '{}'::text[], 'iso-sub-1', 'py-ref-1.1.0'
+      );
+      insert into public.competition_staff (competition_id, user_id, staff_role)
+      values ('${otherId}', '${USER_ORG}', 'organiser');
+    `);
+
+    await db.exec(`
+      update public.town_templates
+         set initial_state = jsonb_set(initial_state, '{reserve}', '99'::jsonb)
+       where competition_id = '${competitionId}'
+    `);
+    await openRoundWindow(db, round1);
+    await db.exec(`
+      insert into public.submissions (
+        id, round_id, team_id, status, allocations, project_starts, idempotency_key, schema_version
+      ) values (
+        '${randomUUID()}', '${round1}', '${teamA}', 'accepted',
+        '${allocJson}'::jsonb, '{}'::text[], 'iso-main-sub', 'py-ref-1.1.0'
+      )
+    `);
+
+    const resetMain = await db.query<{ reset_competition_play: { ok: boolean } }>(
+      `select public.reset_competition_play($1::uuid, $2::uuid) as reset_competition_play`,
+      [competitionId, USER_ORG],
+    );
+    expect(resetMain.rows[0].reset_competition_play.ok).toBe(true);
+
+    const otherLeft = await db.query<{ n: number; status: string; reserve: string }>(`
+      select
+        (select count(*)::int from public.submissions where id = '${otherSub}') as n,
+        (select status from public.rounds where id = '${otherRound}') as status,
+        (select initial_state->>'reserve' from public.town_templates where competition_id = '${otherId}') as reserve
+    `);
+    expect(otherLeft.rows[0].n).toBe(1);
+    expect(otherLeft.rows[0].status).toBe("open");
+    expect(Number(otherLeft.rows[0].reserve)).toBe(220);
+
+    await expect(
+      db.query(`select public.organiser_update_team($1::uuid, $2::uuid, $3::text)`, [
+        otherTeam,
+        USER_A,
+        "Cross Comp",
+      ]),
+    ).rejects.toThrow(/unauthorized|permission denied/i);
+
+    const otherName = await db.query<{ name: string }>(`select name from public.teams where id = $1`, [
+      otherTeam,
+    ]);
+    expect(otherName.rows[0].name).toBe("Other Team");
+
+    // Transactional rollback: missing template aborts the whole reset.
+    await db.exec(`delete from public.town_templates where competition_id = '${otherId}'`);
+    await expect(
+      db.query(`select public.reset_competition_play($1::uuid, $2::uuid)`, [otherId, USER_ORG]),
+    ).rejects.toThrow(/town template missing/i);
+
+    const rolled = await db.query<{ n: number; status: string; comp: string }>(`
+      select
+        (select count(*)::int from public.submissions where id = '${otherSub}') as n,
+        (select status from public.rounds where id = '${otherRound}') as status,
+        (select status from public.competitions where id = '${otherId}') as comp
+    `);
+    expect(rolled.rows[0].n).toBe(1);
+    expect(rolled.rows[0].status).toBe("open");
+    expect(rolled.rows[0].comp).toBe("live");
   });
 });
