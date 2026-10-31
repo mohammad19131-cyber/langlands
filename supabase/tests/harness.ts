@@ -72,6 +72,7 @@ function migrationFiles(): string[] {
     "0013_submit_supersede_with_auth.sql",
     "0014_published_results_own_row.sql",
     "0015_organiser_reset_and_team_edit.sql",
+    "0016_round_record_backups.sql",
   ].map((name) => resolve(repoRoot, "supabase/migrations", name));
 }
 

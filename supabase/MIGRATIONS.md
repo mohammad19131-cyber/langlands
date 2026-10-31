@@ -19,8 +19,9 @@ Forward-only. Do not edit applied files in place.
 | `0013_submit_supersede_with_auth.sql` | `submit_decision` may supersede an accepted row while `auth.uid()` is the captain; clients still cannot UPDATE or set `status` |
 | `0014_published_results_own_row.sql` | Participant `SELECT` on `published_results` is own team after publish; organiser/judge of that competition keep TownPublic reads |
 | `0015_organiser_reset_and_team_edit.sql` | Organiser reset of play data (keeps teams/members); organiser rename of team and member display names |
+| `0016_round_record_backups.sql` | Append-only `round_record_backups` after each successful `publish_round` (scores + town states + submissions); survives play reset |
 
-Apply in that order. Regenerate 0005 only via `npm run seed:sql` so catalogue rows stay aligned with `packages/sim`. Do not edit 0001–0006 in place. Do not apply `0009`–`0015` to a live competition from an agent session.
+Apply in that order. Regenerate 0005 only via `npm run seed:sql` so catalogue rows stay aligned with `packages/sim`. Do not edit 0001–0006 in place. Do not apply `0009`–`0016` to a live competition from an agent session.
 
 ## Phase 2 decisions (were documented conflicts; now explicit)
 

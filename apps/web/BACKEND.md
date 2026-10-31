@@ -105,6 +105,10 @@ All paths are relative to the web origin. Unless noted, responses are JSON. Erro
 
 Tick JSON is sanitized (`noop` / `status` / `checksum` / `idempotent`). No lock payload, towns, or allocations.
 
+### Rate limits
+
+Middleware applies **20 requests / minute / client IP / API route** (sliding window) to every `/api/*` path. Exceeding the limit returns **429** with `Retry-After`. Dynamic segments are normalized (`/api/rounds/:id/lock`). This is best-effort per server instance.
+
 ### Admin
 
 | Method | Path | Who | Behaviour |
@@ -144,7 +148,8 @@ Supporting pure helpers (safe to unit-test): `event-tick-plan.ts`, `event-tick-a
 Applied via `supabase/migrations` (service role after Next.js auth check):
 
 - `submit_decision`, `open_round`, `lock_round`, `claim_process`, `save_process_run`, `publish_round`, `void_round`, `restore_voided_round`, `set_round_window`, `reopen_round`, `audit_append`
-- `0015` defines the same reset/rename as SQL functions. The admin routes do **not** call them, so a missing schema-cache entry does not block `/room`.
+- `0015`: `reset_competition_play`, `organiser_update_team`, `organiser_update_team_member` (admin routes call these RPCs)
+- `0016`: `backup_round_records` runs inside `publish_round`; appends `round_record_backups` (scores + towns + submissions). Survives play reset. No credentials.
 
 RLS: captains never read rival submissions / `town_states` / private locks. `0014` restricts participant `published_results` to own team (must be applied on hosted before relying on PostgREST privacy).
 

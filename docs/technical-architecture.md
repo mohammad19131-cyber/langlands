@@ -52,7 +52,9 @@ Python remains the design lab (`score_lab.py` physics, `official_score.py` score
 | `POST /api/event/tick` | Node | organiser session, or Bearer tick/cron secret |
 | `GET /api/event/tick` | Node | Bearer tick/cron secret only (not a cookie session) |
 | `POST /api/admin/provision-teams` | Node | `TEAM_PROVISION_SECRET` or organiser session |
-| `POST /api/admin/reset-play` | Node | organiser; body `{ confirm: "RESET PLAY" }`; service-role deletes, not the missing RPC; GET is 405 |
+| All `/api/*` | Middleware | 20 req/min/client/route; 429 when exceeded |
+| `publish_round` + `0016` | Postgres | Appends `round_record_backups` (scores + records) after publish |
+| `POST /api/admin/reset-play` | Node | organiser; body `{ confirm: "RESET PLAY" }`; RPC `reset_competition_play`; GET is 405 |
 | `PATCH /api/admin/teams/:teamId` | Node | organiser; rename team |
 | `PATCH /api/admin/teams/:teamId/members/:userId` | Node | organiser; member display name / role |
 
